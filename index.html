@@ -537,12 +537,15 @@ function buildMenu() {
     if(m.adminOnly && !isAdmin()) return;
     if(!m.adminOnly && !canSee(m.id)) return;
     const a = alerts[m.id];
-    grid.innerHTML += `<div class="menu-card" onclick="abrirModulo('${m.id}')">
+    const card = document.createElement('div');
+    card.className = 'menu-card';
+    card.innerHTML = `
       <div class="menu-card-icon">${m.icon}</div>
       <div class="menu-card-title">${m.title}</div>
       <div class="menu-card-desc">${m.desc}</div>
-      ${a ? `<div class="menu-card-alert">${a}</div>` : ''}
-    </div>`;
+      ${a ? `<div class="menu-card-alert">${a}</div>` : ''}`;
+    card.addEventListener('click', () => abrirModulo(m.id));
+    grid.appendChild(card);
   });
 }
 
@@ -1798,6 +1801,56 @@ window.usr_agregar=async function(){
   ['nu-nombre','nu-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   usr_renderLista();alert('✅ Usuario "'+nombre+'" creado.');
 };
+
+// ══════════════════════════════════════════════════════════
+// EXPOSE ALL TO WINDOW (needed for dynamic onclick handlers)
+// ══════════════════════════════════════════════════════════
+window.abrirModulo = abrirModulo;
+// Expose filter variables so onclick inline strings can set them
+Object.defineProperty(window, 'echFiltro', { get:()=>echFiltro, set:v=>{echFiltro=v;} });
+Object.defineProperty(window, 'cajFH',     { get:()=>cajFH,     set:v=>{cajFH=v;} });
+Object.defineProperty(window, 'cajFM',     { get:()=>cajFM,     set:v=>{cajFM=v;} });
+Object.defineProperty(window, 'pvFilt',    { get:()=>pvFilt,    set:v=>{pvFilt=v;} });
+Object.defineProperty(window, 'pvFH',      { get:()=>pvFH,      set:v=>{pvFH=v;} });
+Object.defineProperty(window, 'pvFHM',     { get:()=>pvFHM,     set:v=>{pvFHM=v;} });
+Object.defineProperty(window, 'ingFilt',   { get:()=>ingFilt,   set:v=>{ingFilt=v;} });
+Object.defineProperty(window, 'ingFH',     { get:()=>ingFH,     set:v=>{ingFH=v;} });
+Object.defineProperty(window, 'ingFHM',    { get:()=>ingFHM,    set:v=>{ingFHM=v;} });
+Object.defineProperty(window, 'impFH',     { get:()=>impFH,     set:v=>{impFH=v;} });
+Object.defineProperty(window, 'impFHM',    { get:()=>impFHM,    set:v=>{impFHM=v;} });
+Object.defineProperty(window, 'ivaTipoV',  { get:()=>ivaTipoV,  set:v=>{ivaTipoV=v;} });
+// Expose render functions used in dynamic onclick
+window.echRender = echRender;
+window.echRenderCards = echRenderCards;
+window.c_renderHist = c_renderHist;
+window.c_renderCards = c_renderCards;
+window.p_renderPend = p_renderPend;
+window.p_renderHist = p_renderHist;
+window.p_renderCards = p_renderCards;
+window.i_renderPend = i_renderPend;
+window.i_renderHist = i_renderHist;
+window.i_renderCards = i_renderCards;
+window.iva_renderV = iva_renderV;
+window.iva_renderC = iva_renderC;
+window.iva_renderRes = iva_renderRes;
+window.iva_renderHist = iva_renderHist;
+window.imp_renderPend = imp_renderPend;
+window.imp_renderHist = imp_renderHist;
+window.imp_renderCards = imp_renderCards;
+window.su_renderPagar = su_renderPagar;
+window.su_renderEmps = su_renderEmps;
+window.su_renderHist = su_renderHist;
+window.su_renderCards = su_renderCards;
+window.su_calcNeto = su_calcNeto;
+window.usr_renderLista = usr_renderLista;
+window.ech_dlUpdate = ech_dlUpdate;
+window.p_dlUpdate = p_dlUpdate;
+window.i_dlUpdate = i_dlUpdate;
+window.iva_dlUpdate = iva_dlUpdate;
+window.imp_dlUpdate = imp_dlUpdate;
+window.su_recalcTotal = su_recalcTotal;
+window.isAdmin = isAdmin;
+window.fmt = fmt;
 
 // ══════════════════════════════════════════════════════════
 // TABLE STYLES (inline)
