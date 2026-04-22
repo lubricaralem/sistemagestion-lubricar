@@ -333,12 +333,13 @@ let S = {
   iva:        { ventas: [], compras: [] },
   sueldos:    { empleados: [], pagos: [] },
   impuestos:  { pagos: [] },
-  usuarios:   { lista: [] }
+  usuarios:   { lista: [] },
+  contactos:  { clientes: [], proveedores: [] }
 };
 let modActual = null;
 
 // filtros
-let echFiltro='todos', cajFH='todo', cajFM='',
+let echFiltro='pendiente', cajFH='todo', cajFM='',
     pvFilt='todos', pvFH='todo', pvFHM='',
     ingFilt='todos', ingFH='todo', ingFHM='',
     ivaTipoVenta='Ticket', impFH='todo', impFHM='';
@@ -357,7 +358,7 @@ async function save(mod) {
   await fbSet(mod, S[mod]);
 }
 async function loadAll() {
-  const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios'];
+  const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos'];
   const defaults = {
     echeqs:     { saldo: 0, saldoFecha: null, items: [] },
     caja:       { cierres: [] },
@@ -366,7 +367,8 @@ async function loadAll() {
     iva:        { ventas: [], compras: [] },
     sueldos:    { empleados: [], pagos: [] },
     impuestos:  { pagos: [] },
-    usuarios:   { lista: [] }
+    usuarios:   { lista: [] },
+    contactos:  { clientes: [], proveedores: [] }
   };
   for (const m of mods) {
     const d = await fbGet(m);
@@ -486,7 +488,7 @@ window.importarDatos = async function(input) {
     try {
       const data = JSON.parse(e.target.result);
       showLoading('Importando datos...');
-      const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios'];
+      const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos'];
       for (const k of mods) { if(data[k]) { S[k]=data[k]; await save(k); } }
       hideLoading();
       buildMenu();
@@ -510,6 +512,7 @@ const MODULOS = [
   { id:'sueldos',     icon:'👥', title:'Sueldos',       desc:'Liquidación mensual de empleados.' },
   { id:'impuestos',   icon:'🏛', title:'Impuestos',     desc:'AFIP, IIBB, municipales y vencimientos.' },
   { id:'usuarios',    icon:'⚙️', title:'Usuarios',      desc:'Control de acceso y permisos.', adminOnly:true },
+  { id:'contactos',   icon:'📇', title:'Clientes y Proveedores', desc:'Listas de clientes y proveedores para autocompletar.' },
 ];
 
 function getAlerts() {
@@ -729,8 +732,8 @@ function renderEch() {
     <div class="section">
       <div class="sec-title">Echeqs emitidos <span class="badge b-blue" id="e-badge">0</span></div>
       <div class="filter-row">
-        <button class="fb active" onclick="echFiltro='todos';echRender();echFiltBtn(this)">Todos</button>
-        <button class="fb" onclick="echFiltro='pendiente';echRender();echFiltBtn(this)">Pendientes</button>
+        <button class="fb" onclick="echFiltro='todos';echRender();echFiltBtn(this)">Todos</button>
+        <button class="fb active" onclick="echFiltro='pendiente';echRender();echFiltBtn(this)">Pendientes</button>
         <button class="fb" onclick="echFiltro='hoy';echRender();echFiltBtn(this)">Cobran hoy</button>
         <button class="fb" onclick="echFiltro='cobrado';echRender();echFiltBtn(this)">Cobrados</button>
       </div>
@@ -1055,7 +1058,7 @@ function renderProv(){
         <div class="section">
           <div class="sec-title">Registrar pago</div>
           <div class="form-grid">
-            <div class="fg"><label>Proveedor</label><input type="text" id="p-prov" list="p-dl"/><datalist id="p-dl"></datalist></div>
+            <div class="fg"><label>Proveedor</label><input type="text" id="p-prov" list="p-dl"/><datalist id="p-dl" class="dl-proveedores"></datalist></div>
             <div class="fg"><label>Monto ($)</label><input type="number" id="p-monto" step="0.01"/></div>
             <div class="fg"><label>Fecha pago</label><input type="date" id="p-fpago"/></div>
             <div class="fg"><label>Fecha vencimiento</label><input type="date" id="p-fvenc"/></div>
@@ -1227,7 +1230,7 @@ function renderIng(){
             <button class="tipo-btn" onclick="i_tipo('echeq',this)"><span class="tipo-icon">💻</span>Echeq</button>
           </div>
           <div class="form-grid">
-            <div class="fg"><label>De quién / Origen</label><input type="text" id="i-origen" list="i-dl"/><datalist id="i-dl"></datalist></div>
+            <div class="fg"><label>De quién / Origen</label><input type="text" id="i-origen" list="i-dl"/><datalist id="i-dl" class="dl-clientes"></datalist></div>
             <div class="fg"><label>Monto ($)</label><input type="number" id="i-monto" step="0.01"/></div>
             <div class="fg"><label>Fecha recepción</label><input type="date" id="i-frec"/></div>
             <div class="fg cond" id="i-campo-cobro"><label id="i-lbl-cobro">Fecha de cobro</label><input type="date" id="i-fcobro"/></div>
@@ -1304,7 +1307,7 @@ function i_renderCards(){
 }
 function i_itemHtml(i){
   const h=hoy(),m=manana();let cls='item';
-  if(i.estado!=='acreditado'){if(i.fechaCobro&&(i.fechaCobro===h||i.fechaCobro<h))cls='item al-hoy';else if(i.fechaCobro&&i.fechaCobro===m)cls='item al-man';}else cls='item done';
+  if(i.estado!=='acreditado'){if(i.fechaCobro&&(i.fechaCobro===h||i.fechaCobro<h))cls='item al-hoy';else if(i.fechaCobro&&i.fechaCobro===m)cls='item al-man';}
   const tipo=i.tipo||'transferencia';
   const tBdg=tipo==='transferencia'?'<span class="badge b-blue">Transf.</span>':tipo==='cheque'?'<span class="badge b-purple">Cheque</span>':'<span class="badge b-teal">Echeq</span>';
   const sBdg=i.estado==='acreditado'?'<span class="badge b-green">Acreditado</span>':i.fechaCobro&&(i.fechaCobro===h||i.fechaCobro<h)?'<span class="badge b-red">Cobrar hoy</span>':i.fechaCobro&&i.fechaCobro===m?'<span class="badge b-yellow">Mañana</span>':'<span class="badge b-yellow">Pendiente</span>';
@@ -1347,12 +1350,13 @@ function iva_dlUpdate(){const ps=[...new Set(S.iva.compras.map(c=>c.proveedor))]
 function renderIva(){
   const mc=document.getElementById('mod-content');
   mc.innerHTML=`
+    <div id="iva-module-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div class="tab-row" id="iva-tw" style="margin-bottom:0;flex:1;min-width:300px">
-        <button class="tab active" onclick="setTab('iva-res',this,'#iva-wrap');iva_renderRes()">Resumen</button>
-        <button class="tab" onclick="setTab('iva-ventas',this,'#iva-wrap')">Ventas</button>
-        <button class="tab" onclick="setTab('iva-compras',this,'#iva-wrap')">Compras</button>
-        <button class="tab" onclick="setTab('iva-hist',this,'#iva-wrap')">Historial anual</button>
+        <button class="tab active" onclick="setTab('iva-res',this,'#iva-module-wrap');iva_renderRes()">Resumen</button>
+        <button class="tab" onclick="setTab('iva-ventas',this,'#iva-module-wrap')">Ventas</button>
+        <button class="tab" onclick="setTab('iva-compras',this,'#iva-module-wrap')">Compras</button>
+        <button class="tab" onclick="setTab('iva-hist',this,'#iva-module-wrap')">Historial anual</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn-p" onclick="document.getElementById('iva-import-file').click()" style="font-size:12px;padding:7px 14px;background:#1e8e3e">⬆ Importar Excel IVA</button>
@@ -1392,7 +1396,7 @@ function renderIva(){
           <div class="sec-title">Cargar factura de compra</div>
           <div class="form-grid">
             <div class="fg"><label>Fecha</label><input type="date" id="iv-c-fecha"/></div>
-            <div class="fg"><label>Proveedor</label><input type="text" id="iv-c-prov" list="iva-prov-dl"/><datalist id="iva-prov-dl"></datalist></div>
+            <div class="fg"><label>Proveedor</label><input type="text" id="iv-c-prov" list="iva-prov-dl"/><datalist id="iva-prov-dl" class="dl-proveedores"></datalist></div>
             <div class="fg"><label>N° factura</label><input type="text" id="iv-c-num"/></div>
             <div class="fg"><label>Monto total ($)</label><input type="number" id="iv-c-monto" step="0.01" oninput="iva_calcC()"/></div>
             <div class="fg"><label>IVA ($)</label><input type="number" id="iv-c-iva" step="0.01"/></div>
@@ -1418,8 +1422,10 @@ function renderIva(){
 window.iva_calcV=function(){const m=vn('iv-v-monto'),a=parseFloat(document.getElementById('iv-v-alic').value)||0;const el=document.getElementById('iv-v-iva');if(el)el.value=m>0&&a>0?Math.round((m/(1+a))*a*100)/100:'';};
 window.iva_calcC=function(){const m=vn('iv-c-monto'),a=parseFloat(document.getElementById('iv-c-alic').value)||0;const el=document.getElementById('iv-c-iva');if(el&&a>0)el.value=Math.round((m/(1+a))*a*100)/100||'';};
 window.iva_guardarV=async function(){
-  const fecha=document.getElementById('iv-v-fecha').value,monto=vn('iv-v-monto'),iva=vn('iv-v-iva');
-  if(!fecha||!monto){alert('Completá fecha y monto');return;}
+  const fecha=document.getElementById('iv-v-fecha').value;
+  const monto=vn('iv-v-monto'), iva=vn('iv-v-iva');
+  if(!fecha){alert('Completá la fecha');return;}
+  if(monto===0&&iva===0){alert('Ingresá al menos el monto o el IVA / retención');return;}
   S.iva.ventas.push({id:Date.now(),fecha,tipo:ivaTipoV,monto,iva,numero:document.getElementById('iv-v-num').value.trim()});
   S.iva.ventas.sort((a,b)=>b.fecha.localeCompare(a.fecha));await save('iva');
   ['iv-v-monto','iv-v-iva','iv-v-num'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -1442,7 +1448,14 @@ function iva_renderV(){
   const bd=document.getElementById('iva-v-badge');if(bd)bd.textContent=ventas.length;
   const el=document.getElementById('iva-v-list');if(!el)return;
   if(!ventas.length){el.innerHTML='<div class="empty">Sin ventas.</div>';return;}
-  el.innerHTML=`<table class="iva-tabla"><thead><tr><th>Fecha</th><th>Tipo</th><th style="text-align:right">Monto</th><th style="text-align:right">IVA</th><th>N°</th><th></th></tr></thead><tbody>${ventas.map(v=>`<tr><td>${fmtF(v.fecha)}</td><td style="color:${ivaTipoColor(v.tipo)};font-weight:700">${v.tipo}</td><td style="text-align:right">${fmt(v.monto)}</td><td style="text-align:right">${fmt(v.iva)}</td><td style="font-size:11px;color:#aaa">${v.numero||''}</td><td>${isAdmin()?`<button class="btn-s btn-del" onclick="iva_delV(${v.id})">✕</button>`:''}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="2">Total</td><td style="text-align:right">${fmt(ventas.reduce((s,v)=>s+v.monto,0))}</td><td style="text-align:right">${fmt(ventas.reduce((s,v)=>s+v.iva,0))}</td><td colspan="2"></td></tr></tfoot></table>`;
+  const esRetencion=v=>v.monto===0||v.monto===undefined||v.monto===null||v.monto==='';
+  el.innerHTML=`<table class="iva-tabla"><thead><tr><th>Fecha</th><th>Tipo</th><th style="text-align:right">Monto</th><th style="text-align:right">IVA / Ret.</th><th>N°</th><th></th></tr></thead><tbody>${ventas.map(v=>{
+    const ret=esRetencion(v);
+    const tipoBadge=ret
+      ? '<span style="background:#fef7e0;color:#b06000;border:1px solid #ffe082;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">Retención</span>'
+      : `<span style="color:${ivaTipoColor(v.tipo)};font-weight:700">${v.tipo}</span>`;
+    return `<tr style="${ret?'background:#fffbf0':''}"><td>${fmtF(v.fecha)}</td><td>${tipoBadge}</td><td style="text-align:right">${fmt(v.monto||0)}</td><td style="text-align:right;${ret?'color:#b06000;font-weight:700':''}">${fmt(v.iva)}</td><td style="font-size:11px;color:#aaa">${v.numero||''}</td><td style="display:flex;gap:4px"><button class="btn-s" onclick="iva_editarV(${v.id})" style="font-size:11px">✏</button>${isAdmin()?`<button class="btn-s btn-del" onclick="iva_delV(${v.id})" style="font-size:11px">✕</button>`:''}</td></tr>`;
+  }).join('')}</tbody><tfoot><tr><td colspan="2">Total</td><td style="text-align:right">${fmt(ventas.reduce((s,v)=>s+(v.monto||0),0))}</td><td style="text-align:right">${fmt(ventas.reduce((s,v)=>s+v.iva,0))}</td><td colspan="2"></td></tr></tfoot></table>`;
 }
 function iva_renderC(){
   const mes=document.getElementById('iva-c-mes')?.value||mesPref();
@@ -1942,6 +1955,201 @@ window.iva_importarExcel = async function(input) {
   alert(msg);
 };
 
+
+
+// ══════════════════════════════════════════════════════════
+// CLIENTES Y PROVEEDORES
+// ══════════════════════════════════════════════════════════
+function cont_dlUpdate() {
+  // Actualizar todos los datalists de clientes
+  const clientes = S.contactos.clientes.map(c=>c.nombre).sort();
+  const provs    = S.contactos.proveedores.map(p=>p.nombre).sort();
+  // Clientes
+  document.querySelectorAll('.dl-clientes').forEach(dl => {
+    dl.innerHTML = clientes.map(n=>`<option value="${n}">`).join('');
+  });
+  // Proveedores
+  document.querySelectorAll('.dl-proveedores').forEach(dl => {
+    dl.innerHTML = provs.map(n=>`<option value="${n}">`).join('');
+  });
+  // p-dl (proveedores en pagos)
+  const pdl = document.getElementById('p-dl');
+  if(pdl) pdl.innerHTML = [...new Set([...provs, ...S.proveedores.pagos.map(p=>p.proveedor)])].sort().map(n=>`<option value="${n}">`).join('');
+  // i-dl (clientes en ingresos)
+  const idl = document.getElementById('i-dl');
+  if(idl) idl.innerHTML = [...new Set([...clientes, ...S.ingresos.items.map(i=>i.origen)])].sort().map(n=>`<option value="${n}">`).join('');
+  // iva proveedores
+  const ivdl = document.getElementById('iva-prov-dl');
+  if(ivdl) ivdl.innerHTML = [...new Set([...provs, ...S.iva.compras.map(c=>c.proveedor)])].sort().map(n=>`<option value="${n}">`).join('');
+}
+
+function renderContactos() {
+  const mc = document.getElementById('mod-content');
+  mc.innerHTML = `
+    <div class="tab-row" id="cont-tw">
+      <button class="tab active" onclick="setTab('cont-clientes',this,'#cont-wrap')">👤 Clientes</button>
+      <button class="tab" onclick="setTab('cont-provs',this,'#cont-wrap')">🧾 Proveedores</button>
+    </div>
+    <div id="cont-wrap">
+
+      <!-- CLIENTES -->
+      <div id="cont-clientes" class="panel active">
+        <div class="section">
+          <div class="sec-title">Agregar cliente</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="flex:1;min-width:180px"><label>Nombre del cliente</label><input type="text" id="cl-nuevo-nombre" placeholder="Nombre o razón social"/></div>
+            <button class="btn-p" onclick="cont_agregarCliente()">+ Agregar</button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="sec-title">Lista de clientes <span class="badge b-blue" id="cl-badge">0</span></div>
+          <div class="filter-row">
+            <input type="text" id="cl-buscar" placeholder="Buscar cliente..." style="padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;min-width:200px" oninput="cont_renderClientes()"/>
+          </div>
+          <div id="cl-lista"></div>
+        </div>
+      </div>
+
+      <!-- PROVEEDORES -->
+      <div id="cont-provs" class="panel">
+        <div class="section">
+          <div class="sec-title">Agregar proveedor</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fg" style="flex:1;min-width:180px"><label>Nombre del proveedor</label><input type="text" id="pv-nuevo-nombre" placeholder="Nombre o razón social"/></div>
+            <button class="btn-p" onclick="cont_agregarProv()">+ Agregar</button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="sec-title">Lista de proveedores <span class="badge b-yellow" id="pv-cont-badge">0</span></div>
+          <div class="filter-row">
+            <input type="text" id="pv-buscar" placeholder="Buscar proveedor..." style="padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;min-width:200px" oninput="cont_renderProvs()"/>
+          </div>
+          <div id="pv-lista"></div>
+        </div>
+      </div>
+
+    </div>`;
+  cont_renderClientes();
+  cont_renderProvs();
+}
+
+window.cont_agregarCliente = async function() {
+  const nombre = document.getElementById('cl-nuevo-nombre').value.trim();
+  if(!nombre){alert('Ingresá el nombre');return;}
+  if(S.contactos.clientes.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase())){
+    alert('Ya existe ese cliente.');return;
+  }
+  S.contactos.clientes.push({id:Date.now(), nombre});
+  S.contactos.clientes.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  await save('contactos');
+  document.getElementById('cl-nuevo-nombre').value='';
+  cont_renderClientes(); cont_dlUpdate();
+};
+
+window.cont_agregarProv = async function() {
+  const nombre = document.getElementById('pv-nuevo-nombre').value.trim();
+  if(!nombre){alert('Ingresá el nombre');return;}
+  if(S.contactos.proveedores.find(p=>p.nombre.toLowerCase()===nombre.toLowerCase())){
+    alert('Ya existe ese proveedor.');return;
+  }
+  S.contactos.proveedores.push({id:Date.now(), nombre});
+  S.contactos.proveedores.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  await save('contactos');
+  document.getElementById('pv-nuevo-nombre').value='';
+  cont_renderProvs(); cont_dlUpdate();
+};
+
+window.cont_delCliente = async function(id) {
+  if(!isAdmin()){alert('Solo admin puede eliminar.');return;}
+  if(!confirm('¿Eliminás este cliente?'))return;
+  S.contactos.clientes = S.contactos.clientes.filter(c=>c.id!==id);
+  await save('contactos'); cont_renderClientes(); cont_dlUpdate();
+};
+
+window.cont_delProv = async function(id) {
+  if(!isAdmin()){alert('Solo admin puede eliminar.');return;}
+  if(!confirm('¿Eliminás este proveedor?'))return;
+  S.contactos.proveedores = S.contactos.proveedores.filter(p=>p.id!==id);
+  await save('contactos'); cont_renderProvs(); cont_dlUpdate();
+};
+
+function cont_renderClientes() {
+  const buscar = (document.getElementById('cl-buscar')?.value||'').toLowerCase();
+  let lista = S.contactos.clientes;
+  if(buscar) lista = lista.filter(c=>c.nombre.toLowerCase().includes(buscar));
+  const bd = document.getElementById('cl-badge');
+  if(bd) bd.textContent = S.contactos.clientes.length;
+  const el = document.getElementById('cl-lista');if(!el)return;
+  if(!lista.length){el.innerHTML='<div class="empty">'+(buscar?'Sin resultados.':'No hay clientes cargados. Agregá uno arriba.')+'</div>';return;}
+  el.innerHTML = lista.map(c=>`
+    <div class="item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+      <span style="font-weight:600;font-size:14px">👤 ${c.nombre}</span>
+      ${isAdmin()?`<button class="btn-s btn-del" onclick="cont_delCliente(${c.id})">Eliminar</button>`:''}
+    </div>`).join('');
+}
+
+function cont_renderProvs() {
+  const buscar = (document.getElementById('pv-buscar')?.value||'').toLowerCase();
+  let lista = S.contactos.proveedores;
+  if(buscar) lista = lista.filter(p=>p.nombre.toLowerCase().includes(buscar));
+  const bd = document.getElementById('pv-cont-badge');
+  if(bd) bd.textContent = S.contactos.proveedores.length;
+  const el = document.getElementById('pv-lista');if(!el)return;
+  if(!lista.length){el.innerHTML='<div class="empty">'+(buscar?'Sin resultados.':'No hay proveedores cargados. Agregá uno arriba.')+'</div>';return;}
+  el.innerHTML = lista.map(p=>`
+    <div class="item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
+      <span style="font-weight:600;font-size:14px">🧾 ${p.nombre}</span>
+      ${isAdmin()?`<button class="btn-s btn-del" onclick="cont_delProv(${p.id})">Eliminar</button>`:''}
+    </div>`).join('');
+}
+
+// ── EDITAR VENTA IVA ──
+let ivaEditTipoAct = 'Ticket';
+window.iva_editarV = function(id) {
+  const v = S.iva.ventas.find(x=>x.id===id); if(!v) return;
+  document.getElementById('iva-v-edit-id').value = id;
+  document.getElementById('iva-v-edit-fecha').value = v.fecha || '';
+  document.getElementById('iva-v-edit-monto').value = v.monto || 0;
+  document.getElementById('iva-v-edit-iva').value = v.iva || '';
+  document.getElementById('iva-v-edit-num').value = v.numero || '';
+  ivaEditTipoAct = v.tipo || 'Ticket';
+  // Marcar botón activo
+  ['Ticket','Factura A','Factura B','Factura C'].forEach(t => {
+    const map = {'Ticket':'ticket','Factura A':'factA','Factura B':'factB','Factura C':'factC'};
+    const btn = document.getElementById('ive-btn-'+map[t]);
+    if(btn) btn.classList.toggle('active', t === ivaEditTipoAct);
+  });
+  document.getElementById('iva-v-modal').classList.add('open');
+};
+window.ivaEditTipo = function(t, btn) {
+  ivaEditTipoAct = t;
+  document.querySelectorAll('#iva-v-modal .tv-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+};
+window.ivaEditCalc = function() {
+  const m = parseFloat(document.getElementById('iva-v-edit-monto').value)||0;
+  const a = parseFloat(document.getElementById('iva-v-edit-alic').value)||0;
+  if(a>0) { const el=document.getElementById('iva-v-edit-iva'); if(el) el.value=Math.round((m/(1+a))*a*100)/100||''; }
+};
+window.iva_guardarEdit = async function() {
+  const id = parseInt(document.getElementById('iva-v-edit-id').value);
+  const v = S.iva.ventas.find(x=>x.id===id); if(!v){alert('Error');return;}
+  const fecha = document.getElementById('iva-v-edit-fecha').value;
+  const monto = parseFloat(document.getElementById('iva-v-edit-monto').value)||0;
+  const iva   = parseFloat(document.getElementById('iva-v-edit-iva').value)||0;
+  if(!fecha){alert('Ingresá la fecha');return;}
+  if(monto===0&&iva===0){alert('Ingresá al menos el monto o el IVA');return;}
+  v.fecha  = fecha;
+  v.tipo   = ivaEditTipoAct;
+  v.monto  = monto;
+  v.iva    = iva;
+  v.numero = document.getElementById('iva-v-edit-num').value.trim();
+  S.iva.ventas.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  await save('iva');
+  cerrarModal('iva-v-modal');
+  iva_renderV(); iva_renderRes();
+};
+
 // ══════════════════════════════════════════════════════════
 // EXPOSE ALL TO WINDOW (needed for dynamic onclick handlers)
 // ══════════════════════════════════════════════════════════
@@ -1990,6 +2198,10 @@ window.iva_dlUpdate = iva_dlUpdate;
 window.imp_dlUpdate = imp_dlUpdate;
 window.su_recalcTotal = su_recalcTotal;
 window.isAdmin = isAdmin;
+window.cont_renderClientes = cont_renderClientes;
+window.cont_renderProvs = cont_renderProvs;
+window.cont_dlUpdate = cont_dlUpdate;
+window.renderContactos = renderContactos;
 window.fmt = fmt;
 
 // ══════════════════════════════════════════════════════════
@@ -2000,6 +2212,31 @@ tableStyle.textContent = `table{width:100%;border-collapse:collapse}th{padding:8
 document.head.appendChild(tableStyle);
 
 </script>
+
+<!-- MODAL EDITAR VENTA IVA -->
+<div class="modal-overlay" id="iva-v-modal">
+  <div class="modal-box">
+    <div class="modal-title">Editar venta / retención <button class="modal-close" onclick="cerrarModal('iva-v-modal')">✕</button></div>
+    <input type="hidden" id="iva-v-edit-id"/>
+    <div class="tipo-venta-sel" style="margin-bottom:12px">
+      <button class="tv-btn" id="ive-btn-ticket" onclick="ivaEditTipo('Ticket',this)">🎫 Ticket</button>
+      <button class="tv-btn" id="ive-btn-factA"  onclick="ivaEditTipo('Factura A',this)">📋 Fact. A</button>
+      <button class="tv-btn" id="ive-btn-factB"  onclick="ivaEditTipo('Factura B',this)">📄 Fact. B</button>
+      <button class="tv-btn" id="ive-btn-factC"  onclick="ivaEditTipo('Factura C',this)">📃 Fact. C</button>
+    </div>
+    <div class="form-grid">
+      <div class="fg"><label>Fecha</label><input type="date" id="iva-v-edit-fecha"/></div>
+      <div class="fg"><label>Monto total ($) — 0 para retenciones</label><input type="number" id="iva-v-edit-monto" step="0.01" oninput="ivaEditCalc()"/></div>
+      <div class="fg"><label>IVA / Retención ($)</label><input type="number" id="iva-v-edit-iva" step="0.01"/></div>
+      <div class="fg"><label>Alícuota</label><select id="iva-v-edit-alic" onchange="ivaEditCalc()"><option value="0.21">21%</option><option value="0.105">10.5%</option><option value="0">Manual / Exento</option></select></div>
+      <div class="fg" style="grid-column:1/-1"><label>N° comprobante</label><input type="text" id="iva-v-edit-num"/></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-p" style="flex:1" onclick="iva_guardarEdit()">Guardar cambios</button>
+      <button class="btn-s" onclick="cerrarModal('iva-v-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
