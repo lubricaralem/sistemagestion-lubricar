@@ -1347,11 +1347,17 @@ function iva_dlUpdate(){const ps=[...new Set(S.iva.compras.map(c=>c.proveedor))]
 function renderIva(){
   const mc=document.getElementById('mod-content');
   mc.innerHTML=`
-    <div class="tab-row" id="iva-tw">
-      <button class="tab active" onclick="setTab('iva-res',this,'#iva-wrap');iva_renderRes()">Resumen</button>
-      <button class="tab" onclick="setTab('iva-ventas',this,'#iva-wrap')">Ventas</button>
-      <button class="tab" onclick="setTab('iva-compras',this,'#iva-wrap')">Compras</button>
-      <button class="tab" onclick="setTab('iva-hist',this,'#iva-wrap')">Historial anual</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div class="tab-row" id="iva-tw" style="margin-bottom:0;flex:1;min-width:300px">
+        <button class="tab active" onclick="setTab('iva-res',this,'#iva-wrap');iva_renderRes()">Resumen</button>
+        <button class="tab" onclick="setTab('iva-ventas',this,'#iva-wrap')">Ventas</button>
+        <button class="tab" onclick="setTab('iva-compras',this,'#iva-wrap')">Compras</button>
+        <button class="tab" onclick="setTab('iva-hist',this,'#iva-wrap')">Historial anual</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-p" onclick="document.getElementById('iva-import-file').click()" style="font-size:12px;padding:7px 14px;background:#1e8e3e">⬆ Importar Excel IVA</button>
+        <input type="file" id="iva-import-file" accept=".xlsx" style="display:none" onchange="iva_importarExcel(this)"/>
+      </div>
     </div>
     <div id="iva-wrap">
       <div id="iva-res" class="panel active">
@@ -1803,6 +1809,140 @@ window.usr_agregar=async function(){
 };
 
 // ══════════════════════════════════════════════════════════
+// IVA — IMPORTACIÓN MASIVA DESDE EXCEL
+// ══════════════════════════════════════════════════════════
+window.iva_importarExcel = async function(input) {
+  const file = input.files[0]; if(!file) return;
+  input.value = '';
+
+  // Leer el archivo como ArrayBuffer
+  const buf = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(new Error('Error al leer el archivo'));
+    r.readAsArrayBuffer(file);
+  });
+
+  // Parsear con SheetJS (cargado desde CDN)
+  let XLSX;
+  try {
+    XLSX = window.XLSX;
+    if (!XLSX) throw new Error('SheetJS no disponible');
+  } catch(e) {
+    alert('Error: librería de Excel no disponible. Recargá la página e intentá de nuevo.');
+    return;
+  }
+
+  const workbook = XLSX.read(buf, { type: 'array', cellDates: true });
+
+  // ── VENTAS ──
+  let sheetV = workbook.Sheets['📊 VENTAS'] || workbook.Sheets['VENTAS'];
+  // Intentar con cualquier hoja que contenga "VENT"
+  if (!sheetV) {
+    const key = Object.keys(workbook.Sheets).find(k => k.toUpperCase().includes('VENT'));
+    if (key) sheetV = workbook.Sheets[key];
+  }
+
+  // ── COMPRAS ──
+  let sheetC = workbook.Sheets['🧾 COMPRAS'] || workbook.Sheets['COMPRAS'];
+  if (!sheetC) {
+    const key = Object.keys(workbook.Sheets).find(k => k.toUpperCase().includes('COMPRA'));
+    if (key) sheetC = workbook.Sheets[key];
+  }
+
+  if (!sheetV && !sheetC) {
+    alert('No se encontraron las hojas "VENTAS" o "COMPRAS" en el archivo.\nAsegurate de usar la planilla descargada desde el sistema.');
+    return;
+  }
+
+  function excelDateToISO(val) {
+    if (!val) return '';
+    if (val instanceof Date) {
+      const y = val.getFullYear(), m = String(val.getMonth()+1).padStart(2,'0'), d = String(val.getDate()).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+    if (typeof val === 'string') {
+      // DD/MM/AAAA
+      const m = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+      // AAAA-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+    }
+    if (typeof val === 'number') {
+      // Excel serial date
+      const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+      const y = d.getUTCFullYear(), mo = String(d.getUTCMonth()+1).padStart(2,'0'), dy = String(d.getUTCDate()).padStart(2,'0');
+      return `${y}-${mo}-${dy}`;
+    }
+    return '';
+  }
+
+  let ventasImportadas = 0, comprasImportadas = 0, errores = [];
+
+  // Parsear ventas
+  if (sheetV) {
+    const rows = XLSX.utils.sheet_to_json(sheetV, { defval: '' });
+    rows.forEach((row, idx) => {
+      const fecha = excelDateToISO(row.fecha);
+      const monto = parseFloat(row.monto_total) || 0;
+      const iva   = parseFloat(row.iva) || 0;
+      const tipo  = (row.tipo || '').toString().trim();
+      if (!fecha || !monto || !tipo) return; // fila vacía o ejemplo
+      const tiposValidos = ['Ticket', 'Factura A', 'Factura B', 'Factura C'];
+      if (!tiposValidos.includes(tipo)) {
+        errores.push(`Venta fila ${idx+2}: tipo "${tipo}" no válido (usá: ${tiposValidos.join(', ')})`);
+        return;
+      }
+      S.iva.ventas.push({
+        id: Date.now() + Math.random(),
+        fecha, tipo, monto,
+        iva: Math.round(iva * 100) / 100,
+        numero: (row.numero || '').toString().trim()
+      });
+      ventasImportadas++;
+    });
+  }
+
+  // Parsear compras
+  if (sheetC) {
+    const rows = XLSX.utils.sheet_to_json(sheetC, { defval: '' });
+    rows.forEach((row, idx) => {
+      const fecha  = excelDateToISO(row.fecha);
+      const monto  = parseFloat(row.monto_total) || 0;
+      const iva    = parseFloat(row.iva) || 0;
+      const prov   = (row.proveedor || '').toString().trim();
+      if (!fecha || !monto || !prov) return;
+      S.iva.compras.push({
+        id: Date.now() + Math.random(),
+        fecha, proveedor: prov,
+        numero: (row.numero || '').toString().trim(),
+        monto, iva: Math.round(iva * 100) / 100
+      });
+      comprasImportadas++;
+    });
+  }
+
+  if (ventasImportadas === 0 && comprasImportadas === 0) {
+    alert('No se importó ningún registro.\nVerificá que las filas tengan fecha, monto y tipo/proveedor completados.');
+    return;
+  }
+
+  // Ordenar
+  S.iva.ventas.sort((a,b) => b.fecha.localeCompare(a.fecha));
+  S.iva.compras.sort((a,b) => b.fecha.localeCompare(a.fecha));
+
+  showLoading('Guardando en Firebase...');
+  await save('iva');
+  hideLoading();
+
+  iva_dlUpdate(); iva_renderV(); iva_renderC(); iva_renderRes();
+
+  let msg = `✅ Importación completada:\n  • ${ventasImportadas} ventas importadas\n  • ${comprasImportadas} compras importadas`;
+  if (errores.length) msg += `\n\n⚠ Errores (${errores.length}):\n` + errores.slice(0,5).join('\n');
+  alert(msg);
+};
+
+// ══════════════════════════════════════════════════════════
 // EXPOSE ALL TO WINDOW (needed for dynamic onclick handlers)
 // ══════════════════════════════════════════════════════════
 window.abrirModulo = abrirModulo;
@@ -1860,5 +2000,6 @@ tableStyle.textContent = `table{width:100%;border-collapse:collapse}th{padding:8
 document.head.appendChild(tableStyle);
 
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
