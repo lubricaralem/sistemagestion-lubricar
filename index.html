@@ -6,15 +6,30 @@
 <title>Lubricar Alem — Gestión</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f0f0ee;min-height:100vh}
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap');
+:root{
+  --gold:#C9A43D;
+  --gold-light:#e8c86a;
+  --gold-dark:#a8842a;
+  --black:#0D0D0D;
+  --black2:#2B2B2B;
+  --gray-light:#F5F5F5;
+  --gray-mid:#D9D9D9;
+  --white:#FFFFFF;
+  --green:#1e8e3e;
+  --red:#d93025;
+  --blue:#1a73e8;
+  --orange:#e37400;
+}
+body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black);background:var(--gray-light);min-height:100vh}
 
 /* ── LOGIN ── */
-.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1a1a1a}
-.login-box{background:#fff;border-radius:16px;padding:44px 40px;width:100%;max-width:400px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3)}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--black)}
+.login-box{background:#fff;border-radius:4px;padding:44px 40px;width:100%;max-width:400px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.5);border-top:4px solid var(--gold)}
 .login-logo{max-width:240px;width:85%;margin:0 auto 28px;display:block}
-.login-title{font-size:13px;color:#999;margin-bottom:32px;letter-spacing:.3px}
-.google-btn{width:100%;padding:13px 16px;border:2px solid #1a1a1a;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;transition:.15s}
-.google-btn:hover{background:#1a1a1a;color:#fff}
+.login-title{font-size:12px;color:#888;margin-bottom:32px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
+.google-btn{width:100%;padding:13px 16px;border:2px solid var(--black);border-radius:4px;background:#fff;cursor:pointer;font-size:14px;font-weight:700;font-family:"Montserrat",sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:.15s}
+.google-btn:hover{background:var(--gold);border-color:var(--gold);color:#fff}
 .google-btn svg{flex-shrink:0}
 .login-err{color:#d93025;font-size:13px;margin-top:14px;display:none;padding:10px;background:#fce8e6;border-radius:6px}
 .login-err.show{display:block}
@@ -25,7 +40,7 @@ body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f0f0e
 .app.visible{display:flex}
 
 /* ── TOPBAR ── */
-.topbar{background:#1a1a1a;padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar{background:var(--black);padding:0 20px;height:58px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:3px solid var(--gold)}
 .topbar-left{display:flex;align-items:center;gap:14px}
 .topbar-logo{height:38px}
 .topbar-right{display:flex;align-items:center;gap:10px}
@@ -33,88 +48,89 @@ body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f0f0e
 .user-avatar{width:30px;height:30px;border-radius:50%;border:2px solid #444}
 .user-name{color:#ddd;font-weight:600;font-size:13px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .role-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase}
-.role-admin{background:#1a73e8;color:#fff}
+.role-admin{background:var(--gold);color:var(--black)}
 .role-user{background:#444;color:#ccc}
-.btn-topbar{padding:6px 12px;font-size:12px;border:1px solid #555;border-radius:6px;cursor:pointer;background:transparent;color:#ccc;white-space:nowrap}
-.btn-topbar:hover{background:#333;color:#fff}
+.btn-topbar{padding:6px 12px;font-size:11px;border:1px solid #555;border-radius:3px;cursor:pointer;background:transparent;color:#ccc;white-space:nowrap;font-family:"Montserrat",sans-serif;font-weight:600;letter-spacing:.5px}
+.btn-topbar:hover{background:var(--gold);border-color:var(--gold);color:#fff}
 
 /* ── MENÚ PRINCIPAL (tarjetas) ── */
-.main-menu{padding:28px 24px;flex:1}
-.menu-welcome{font-size:13px;color:#888;margin-bottom:6px}
-.menu-title{font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:24px}
-.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;max-width:1100px}
-.menu-card{background:#fff;border-radius:14px;padding:28px 22px;cursor:pointer;border:2px solid transparent;transition:.18s;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
-.menu-card:hover{border-color:#1a1a1a;transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.12)}
-.menu-card.active{border-color:#1a73e8;background:#f0f7ff}
-.menu-card-icon{font-size:32px;line-height:1}
-.menu-card-title{font-size:16px;font-weight:700;color:#1a1a1a}
-.menu-card-desc{font-size:12px;color:#999;line-height:1.4}
-.menu-card-alert{position:absolute;top:14px;right:14px;background:#d93025;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;min-width:22px;text-align:center}
+.main-menu{padding:28px 24px;flex:1;background:var(--gray-light)}
+.menu-welcome{font-size:12px;color:#888;margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;font-weight:600}
+.menu-title{font-size:28px;font-weight:700;color:var(--black);margin-bottom:24px;font-family:"Anton",sans-serif;letter-spacing:.5px}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;max-width:1100px}
+.menu-card{background:#fff;border-radius:4px;padding:28px 22px;cursor:pointer;border:2px solid transparent;border-left:4px solid var(--gray-mid);transition:.18s;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+.menu-card:hover{border-color:var(--gold);border-left-color:var(--gold);transform:translateY(-2px);box-shadow:0 6px 20px rgba(201,164,61,.2)}
+.menu-card.active{border-color:var(--gold);border-left-color:var(--gold);background:#fffbf0}
+.menu-card-icon{font-size:28px;line-height:1}
+.menu-card-title{font-size:15px;font-weight:700;color:var(--black);font-family:"Anton",sans-serif;letter-spacing:.3px}
+.menu-card-desc{font-size:11px;color:#999;line-height:1.4;font-weight:500}
+.menu-card-alert{position:absolute;top:12px;right:12px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;min-width:22px;text-align:center}
 
 /* ── MODULE VIEW ── */
 .module-view{display:none;flex-direction:column;flex:1;min-height:0}
 .module-view.visible{display:flex}
-.mod-header{background:#fff;border-bottom:1px solid #e0e0e0;padding:0 20px;height:52px;display:flex;align-items:center;gap:14px;flex-shrink:0}
-.mod-back{width:34px;height:34px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:#555}
-.mod-back:hover{background:#f5f5f5}
-.mod-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
-.mod-icon{font-size:20px}
+.mod-header{background:var(--black);padding:0 20px;height:52px;display:flex;align-items:center;gap:14px;flex-shrink:0;border-bottom:3px solid var(--gold)}
+.mod-back{width:34px;height:34px;border-radius:3px;border:1px solid #555;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:#ccc}
+.mod-back:hover{background:var(--gold);border-color:var(--gold);color:#fff}
+.mod-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;font-family:"Anton",sans-serif;letter-spacing:.5px;color:#fff}
+.mod-icon{font-size:20px;color:var(--gold)}
 .mod-content{padding:1rem;flex:1;overflow-y:auto;max-width:1100px;width:100%;margin:0 auto}
 
 /* ── COMPONENTES ── */
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.5rem}
-.card{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8e8}
-.card-label{font-size:11px;color:#888;margin-bottom:4px;font-weight:600}
-.card-value{font-size:18px;font-weight:700}
-.cv-green{color:#1e8e3e}.cv-red{color:#d93025}.cv-yellow{color:#e37400}.cv-blue{color:#1a73e8}.cv-purple{color:#7b1fa2}
-.section{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:1rem}
-.sec-title{font-size:14px;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px;color:#222}
+.card{background:#fff;border-radius:4px;padding:14px 16px;border:1px solid var(--gray-mid);border-top:3px solid var(--gray-mid)}
+.card-label{font-size:10px;color:#888;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.card-value{font-size:18px;font-weight:700;font-family:"Montserrat",sans-serif}
+.cv-green{color:var(--green)}.cv-red{color:var(--red)}.cv-yellow{color:var(--gold)}.cv-blue{color:var(--blue)}.cv-purple{color:#7b1fa2}.cv-gold{color:var(--gold)}
+.section{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:1.1rem 1.25rem;margin-bottom:1rem;border-top:3px solid var(--gold)}
+.sec-title{font-size:13px;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px;color:var(--black);text-transform:uppercase;letter-spacing:.5px;font-family:"Montserrat",sans-serif}
 .badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600}
 .b-green{background:#e6f4ea;color:#1e8e3e}.b-red{background:#fce8e6;color:#d93025}
-.b-yellow{background:#fef7e0;color:#e37400}.b-blue{background:#e8f0fe;color:#1a73e8}
+.b-yellow{background:#fef7e0;color:var(--gold-dark)}.b-blue{background:#e8f0fe;color:#1a73e8}
 .b-purple{background:#f3e8fd;color:#7b1fa2}.b-teal{background:#e0f5f1;color:#0d7a5f}.b-gray{background:#f1f1f1;color:#666}
+.b-gold{background:#fdf3d6;color:var(--gold-dark);border:1px solid var(--gold-light)}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px}
 .fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:11px;color:#555;font-weight:700}
-.fg input,.fg select{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;background:#fafafa}
-.fg input:focus,.fg select:focus{outline:none;border-color:#1a1a1a;background:#fff}
-.btn-p{background:#1a1a1a;color:#fff;border:none;padding:9px 18px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700}
-.btn-p:hover{background:#333}
-.btn-s{padding:5px 11px;font-size:12px;border-radius:6px;cursor:pointer;border:1px solid #ddd;background:#f5f5f5;color:#555}
+.fg label{font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-family:"Montserrat",sans-serif}
+.fg input,.fg select{width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:"Montserrat",sans-serif}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--gold);background:#fff;box-shadow:0 0 0 2px rgba(201,164,61,.15)}
+.btn-p{background:var(--gold);color:var(--black);border:none;padding:9px 18px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:700;font-family:"Montserrat",sans-serif;text-transform:uppercase;letter-spacing:.5px}
+.btn-p:hover{background:var(--gold-dark);color:#fff}
+.btn-s{padding:5px 11px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid var(--gray-mid);background:#f5f5f5;color:#555;font-family:"Montserrat",sans-serif;font-weight:600}
 .btn-del{border-color:#fca9a9;color:#d93025;background:#fff5f5}
-.tab-row{display:flex;gap:0;margin-bottom:1.5rem;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;flex-wrap:wrap}
-.tab{flex:1;padding:9px 6px;text-align:center;font-size:12px;cursor:pointer;background:#fff;border:none;color:#666;min-width:80px;font-weight:600}
-.tab.active{background:#1a1a1a;color:#fff}
+.tab-row{display:flex;gap:0;margin-bottom:1.5rem;border:1px solid var(--gray-mid);border-radius:3px;overflow:hidden;flex-wrap:wrap}
+.tab{flex:1;padding:9px 6px;text-align:center;font-size:11px;cursor:pointer;background:#fff;border:none;color:#666;min-width:80px;font-weight:700;font-family:"Montserrat",sans-serif;text-transform:uppercase;letter-spacing:.3px}
+.tab.active{background:var(--black);color:var(--gold)}
 .panel{display:none}.panel.active{display:block}
-.item{border:1px solid #e8e8e8;border-radius:10px;padding:13px;margin-bottom:8px;background:#fff}
-.item.al-hoy{border-color:#d93025;background:#fff5f5}
-.item.al-man{border-color:#e37400;background:#fffbf0}
+.item{border:1px solid var(--gray-mid);border-radius:4px;padding:13px;margin-bottom:8px;background:#fff;border-left:3px solid var(--gray-mid)}
+.item.al-hoy{border-color:var(--red);border-left-color:var(--red);background:#fff5f5}
+.item.al-man{border-color:var(--gold);border-left-color:var(--gold);background:#fffdf0}
 .item.done{opacity:.5;background:#fafafa}
 .item-h{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px}
-.item-name{font-weight:700;font-size:14px}
+.item-name{font-weight:700;font-size:14px;font-family:"Montserrat",sans-serif}
 .item-amt{font-size:15px;font-weight:700}
 .item-meta{font-size:12px;color:#888;display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
 .item-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
 .filter-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
-.fb{padding:5px 12px;font-size:12px;border-radius:20px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#666;font-weight:600}
-.fb.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.fb{padding:5px 12px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid var(--gray-mid);background:#fff;color:#666;font-weight:600;font-family:"Montserrat",sans-serif}
+.fb.active{background:var(--gold);color:var(--black);border-color:var(--gold)}
 .empty{text-align:center;color:#bbb;padding:2.5rem;font-size:13px}
 .mes-h{font-size:11px;font-weight:700;color:#999;padding:6px 0;margin-top:4px;border-bottom:1px solid #eee;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
 .alert-box{border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;display:none}
 .alert-box.show{display:block}
 .alert-danger{background:#fce8e6;border:1px solid #f5c6c3;color:#c62828}
 .alert-info{background:#e8f0fe;border:1px solid #c5d9fb;color:#1557b0}
-.neto-box{background:#f8f8f8;border-radius:8px;padding:12px 14px;margin-bottom:12px;border:1px solid #e8e8e8}
+.neto-box{background:var(--gray-light);border-radius:3px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--gray-mid);border-left:4px solid var(--gold)}
 .cond{display:none}.cond.vis{display:flex;flex-direction:column;gap:4px}
 .tipo-sel{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
 .tipo-btn{padding:11px 6px;text-align:center;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:12px;color:#666;background:#fff;font-weight:600}
-.tipo-btn.active{border-color:#1a1a1a;background:#1a1a1a;color:#fff}
+.tipo-btn.active{border-color:var(--gold);background:var(--gold);color:var(--black);font-weight:700}
 .tipo-icon{font-size:17px;display:block;margin-bottom:3px}
 .echeq-info-box{background:#e8f0fe;border:1px solid #c5d9fb;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#1557b0;display:none}
 .echeq-info-box.vis{display:block}
 /* IVA */
 .iva-resumen{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem}
-.iva-box{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:16px;text-align:center}
+.iva-box{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:16px;text-align:center}
 .iva-box-title{font-size:11px;color:#888;margin-bottom:6px;font-weight:700;text-transform:uppercase}
 .iva-box-val{font-size:22px;font-weight:700}
 .iva-box-sub{font-size:11px;color:#aaa;margin-top:4px}
@@ -130,7 +146,7 @@ body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f0f0e
 .iva-tabla tfoot td{font-weight:700;border-top:2px solid #e0e0e0;background:#f8f8f8;border-bottom:none}
 .tipo-venta-sel{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
 .tv-btn{padding:9px 4px;text-align:center;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:12px;color:#666;background:#fff;font-weight:600}
-.tv-btn.active{border-color:#1a1a1a;background:#1a1a1a;color:#fff}
+.tv-btn.active{border-color:var(--gold);background:var(--gold);color:var(--black);font-weight:700}
 /* Sueldos */
 .emp-card{border:1px solid #e8e8e8;border-radius:10px;padding:14px;margin-bottom:10px;background:#fff}
 .emp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -142,13 +158,13 @@ body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f0f0e
 .sueldo-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #f0f0f0}
 /* Dashboard */
 .dash-bloque{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
-.dash-col{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:16px}
-.dash-col-title{font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px;letter-spacing:.4px}
+.dash-col{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:16px;border-top:3px solid var(--gold)}
+.dash-col-title{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px;letter-spacing:.8px;font-family:"Montserrat",sans-serif}
 .dash-fila{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #f5f5f5}
 .dash-fila:last-child{border:none;font-weight:700;font-size:14px;padding-top:8px}
 .dash-fila.sub{color:#aaa;font-size:12px}
-.dash-card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:16px}
-.dash-card-title{font-size:11px;color:#888;margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.dash-card{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:16px}
+.dash-card-title{font-size:10px;color:#888;margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-family:"Montserrat",sans-serif}
 .dash-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid #f0f0f0}
 .dash-row:last-child{border:none;font-weight:700}
 .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:1rem}
@@ -167,13 +183,13 @@ body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f0f0e
 /* Modal */
 .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal-box{background:#fff;border-radius:14px;padding:26px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;margin:16px}
-.modal-title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal-box{background:#fff;border-radius:4px;padding:26px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;margin:16px;border-top:4px solid var(--gold)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-family:"Anton",sans-serif;letter-spacing:.3px;text-transform:uppercase}
 .modal-close{cursor:pointer;font-size:22px;color:#aaa;border:none;background:none;line-height:1}
 /* Loading */
 .loading-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000;color:#fff;gap:16px}
 .loading-screen.hidden{display:none}
-.spinner{width:36px;height:36px;border:3px solid #444;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+.spinner{width:36px;height:36px;border:3px solid #444;border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Echeq imp badge */
 .ech-imp{background:#fff8e1;color:#b06000;border:1px solid #ffe082;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
@@ -206,6 +222,33 @@ body{font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;background:#f0f0e
   .cards{grid-template-columns:1fr 1fr}
   .form-grid{grid-template-columns:1fr}
 }
+
+/* ── PEDIDOS ── */
+.pedido-card{background:#fff;border-radius:4px;padding:16px;margin-bottom:10px;border:1px solid var(--gray-mid);border-left:5px solid var(--gray-mid);transition:.2s;position:relative}
+.pedido-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.pedido-card.st-pedido{border-left-color:#1a73e8}
+.pedido-card.st-preparar{border-left-color:#e37400}
+.pedido-card.st-espera{border-left-color:#7b1fa2}
+.pedido-card.st-listo{border-left-color:var(--gold)}
+.pedido-card.st-retirado{border-left-color:var(--green);opacity:.6}
+.pedido-estado{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-family:'Montserrat',sans-serif}
+.pe-pedido{background:#e8f0fe;color:#1a73e8}
+.pe-preparar{background:#fef7e0;color:#b06000}
+.pe-espera{background:#f3e8fd;color:#7b1fa2}
+.pe-listo{background:#fdf3d6;color:var(--gold-dark);border:1px solid var(--gold-light)}
+.pe-retirado{background:#e6f4ea;color:var(--green)}
+.pedido-nombre{font-size:16px;font-weight:700;font-family:'Anton',sans-serif;letter-spacing:.3px}
+.pedido-meta{font-size:12px;color:#888;display:flex;gap:12px;flex-wrap:wrap;margin:6px 0}
+.pedido-stock{font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:3px}
+.stock-si{background:#e6f4ea;color:var(--green)}
+.stock-no{background:#fce8e6;color:var(--red)}
+.estado-selector{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+.es-btn{padding:8px 4px;text-align:center;border:2px solid var(--gray-mid);border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;font-family:'Montserrat',sans-serif;text-transform:uppercase;letter-spacing:.3px;background:#fff;color:#666;line-height:1.2}
+.es-btn.active-pedido{border-color:#1a73e8;background:#e8f0fe;color:#1a73e8}
+.es-btn.active-preparar{border-color:#e37400;background:#fef7e0;color:#b06000}
+.es-btn.active-espera{border-color:#7b1fa2;background:#f3e8fd;color:#7b1fa2}
+.es-btn.active-listo{border-color:var(--gold);background:#fdf3d6;color:var(--gold-dark)}
+.es-btn.active-retirado{border-color:var(--green);background:#e6f4ea;color:var(--green)}
 </style>
 </head>
 <body>
@@ -334,7 +377,8 @@ let S = {
   sueldos:    { empleados: [], pagos: [] },
   impuestos:  { pagos: [] },
   usuarios:   { lista: [] },
-  contactos:  { clientes: [], proveedores: [] }
+  contactos:  { clientes: [], proveedores: [] },
+  pedidos:    { items: [] }
 };
 let modActual = null;
 
@@ -358,7 +402,7 @@ async function save(mod) {
   await fbSet(mod, S[mod]);
 }
 async function loadAll() {
-  const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos'];
+  const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos'];
   const defaults = {
     echeqs:     { saldo: 0, saldoFecha: null, items: [] },
     caja:       { cierres: [] },
@@ -368,7 +412,8 @@ async function loadAll() {
     sueldos:    { empleados: [], pagos: [] },
     impuestos:  { pagos: [] },
     usuarios:   { lista: [] },
-    contactos:  { clientes: [], proveedores: [] }
+    contactos:  { clientes: [], proveedores: [] },
+    pedidos:    { items: [] }
   };
   for (const m of mods) {
     const d = await fbGet(m);
@@ -488,7 +533,7 @@ window.importarDatos = async function(input) {
     try {
       const data = JSON.parse(e.target.result);
       showLoading('Importando datos...');
-      const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos'];
+      const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos'];
       for (const k of mods) { if(data[k]) { S[k]=data[k]; await save(k); } }
       hideLoading();
       buildMenu();
@@ -511,6 +556,7 @@ const MODULOS = [
   { id:'iva',         icon:'📋', title:'IVA',           desc:'Débito fiscal, crédito y diferencia mensual.' },
   { id:'sueldos',     icon:'👥', title:'Sueldos',       desc:'Liquidación mensual de empleados.' },
   { id:'impuestos',   icon:'🏛', title:'Impuestos',     desc:'AFIP, IIBB, municipales y vencimientos.' },
+  { id:'pedidos',     icon:'📦', title:'Pedidos',        desc:'Seguimiento de pedidos de clientes.' },
   { id:'usuarios',    icon:'⚙️', title:'Usuarios',      desc:'Control de acceso y permisos.', adminOnly:true },
   { id:'contactos',   icon:'📇', title:'Clientes y Proveedores', desc:'Listas de clientes y proveedores para autocompletar.' },
 ];
@@ -1957,6 +2003,190 @@ window.iva_importarExcel = async function(input) {
 
 
 
+
+// ══════════════════════════════════════════════════════════
+// PEDIDOS
+// ══════════════════════════════════════════════════════════
+const ESTADOS_PEDIDO = [
+  { id:'pedido',   label:'Pedido',             cls:'pe-pedido',   icon:'🔵' },
+  { id:'preparar', label:'Preparar',            cls:'pe-preparar', icon:'🟠' },
+  { id:'espera',   label:'Esp. Mercadería',     cls:'pe-espera',   icon:'🟣' },
+  { id:'listo',    label:'Listo p/ retirar',    cls:'pe-listo',    icon:'⭐' },
+  { id:'retirado', label:'Retirado',            cls:'pe-retirado', icon:'✅' },
+];
+
+let pedFiltro = 'activos'; // activos | retirado | todos
+let pedEstadoFiltro = 'todos';
+
+function renderPedidos() {
+  const mc = document.getElementById('mod-content');
+  mc.innerHTML = `
+    <div class="cards">
+      <div class="card" style="border-top-color:#1a73e8"><div class="card-label">Pedidos activos</div><div class="card-value cv-blue" id="ped-n-activos">0</div></div>
+      <div class="card" style="border-top-color:var(--gold)"><div class="card-label">Listos p/ retirar</div><div class="card-value cv-gold" id="ped-n-listos">0</div></div>
+      <div class="card" style="border-top-color:#7b1fa2"><div class="card-label">Esperando mercad.</div><div class="card-value cv-purple" id="ped-n-espera">0</div></div>
+      <div class="card" style="border-top-color:var(--green)"><div class="card-label">Retirados (total)</div><div class="card-value cv-green" id="ped-n-retirados">0</div></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Nuevo pedido</div>
+      <div class="form-grid">
+        <div class="fg"><label>Cliente</label><input type="text" id="ped-cliente" list="ped-cl-dl" placeholder="Nombre del cliente"/><datalist id="ped-cl-dl" class="dl-clientes"></datalist></div>
+        <div class="fg"><label>Descripción del pedido</label><input type="text" id="ped-desc" placeholder="Qué necesita..."/></div>
+        <div class="fg"><label>¿Está en stock?</label><select id="ped-stock">
+          <option value="si">✅ Sí, está en stock</option>
+          <option value="no">❌ No, hay que pedirlo</option>
+        </select></div>
+        <div class="fg"><label>Proveedor</label><input type="text" id="ped-proveedor" list="ped-pv-dl" placeholder="Proveedor (si hay que pedir)"/><datalist id="ped-pv-dl" class="dl-proveedores"></datalist></div>
+        <div class="fg"><label>Fecha estimada del proveedor</label><input type="date" id="ped-fproveedor"/></div>
+        <div class="fg"><label>Fecha estimada al cliente</label><input type="date" id="ped-fcliente"/></div>
+        <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><input type="text" id="ped-obs" placeholder="Notas adicionales..."/></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Estado inicial:</div>
+        <div class="estado-selector" id="ped-nuevo-estado">
+          ${ESTADOS_PEDIDO.map(e=>`<button class="es-btn${e.id==='pedido'?' active-pedido':''}" onclick="pedSetNuevoEstado('${e.id}',this)">${e.icon}<br>${e.label}</button>`).join('')}
+        </div>
+      </div>
+      <button class="btn-p" onclick="ped_guardar()">+ Registrar pedido</button>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Pedidos <span class="badge b-blue" id="ped-badge">0</span></div>
+      <div class="filter-row">
+        <button class="fb active" onclick="pedFiltro='activos';ped_render();pedFBtn(this)">Activos</button>
+        <button class="fb" onclick="pedFiltro='listo';ped_render();pedFBtn(this)">⭐ Listos</button>
+        <button class="fb" onclick="pedFiltro='espera';ped_render();pedFBtn(this)">🟣 Esperando</button>
+        <button class="fb" onclick="pedFiltro='retirado';ped_render();pedFBtn(this)">Archivados</button>
+        <button class="fb" onclick="pedFiltro='todos';ped_render();pedFBtn(this)">Todos</button>
+        <input type="text" id="ped-buscar" placeholder="Buscar cliente..." style="padding:5px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:12px;max-width:160px;font-family:'Montserrat',sans-serif" oninput="ped_render()"/>
+      </div>
+      <div id="ped-lista"></div>
+    </div>`;
+
+  cont_dlUpdate();
+  ped_renderCards();
+  ped_render();
+}
+
+let pedNuevoEstado = 'pedido';
+window.pedSetNuevoEstado = function(est, btn) {
+  pedNuevoEstado = est;
+  document.querySelectorAll('#ped-nuevo-estado .es-btn').forEach(b=>{
+    b.className = 'es-btn';
+  });
+  btn.className = 'es-btn active-' + est;
+};
+
+window.ped_guardar = async function() {
+  const cliente = document.getElementById('ped-cliente').value.trim();
+  const desc    = document.getElementById('ped-desc').value.trim();
+  if(!cliente || !desc) { alert('Completá cliente y descripción'); return; }
+  S.pedidos.items.push({
+    id:          Date.now(),
+    cliente,
+    desc,
+    stock:       document.getElementById('ped-stock').value,
+    proveedor:   document.getElementById('ped-proveedor').value.trim(),
+    fProveedor:  document.getElementById('ped-fproveedor').value,
+    fCliente:    document.getElementById('ped-fcliente').value,
+    obs:         document.getElementById('ped-obs').value.trim(),
+    estado:      pedNuevoEstado,
+    fechaCarga:  hoy(),
+  });
+  S.pedidos.items.sort((a,b)=>b.fechaCarga.localeCompare(a.fechaCarga));
+  await save('pedidos');
+  ['ped-cliente','ped-desc','ped-proveedor','ped-fproveedor','ped-fcliente','ped-obs'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('ped-stock').value='si';
+  // Reset estado selector
+  document.querySelectorAll('#ped-nuevo-estado .es-btn').forEach((b,i)=>{b.className='es-btn'+(i===0?' active-pedido':'');});
+  pedNuevoEstado='pedido';
+  ped_renderCards(); ped_render();
+};
+
+window.ped_cambiarEstado = async function(id, nuevoEstado) {
+  const p = S.pedidos.items.find(x=>x.id===id); if(!p) return;
+  p.estado = nuevoEstado;
+  if(nuevoEstado==='retirado') p.fechaRetiro = hoy();
+  await save('pedidos'); ped_renderCards(); ped_render();
+};
+
+window.ped_del = async function(id) {
+  if(!isAdmin()){alert('Solo admin puede eliminar.');return;}
+  if(!confirm('¿Eliminás este pedido?'))return;
+  S.pedidos.items = S.pedidos.items.filter(x=>x.id!==id);
+  await save('pedidos'); ped_renderCards(); ped_render();
+};
+
+window.pedFBtn = function(btn) {
+  document.querySelectorAll('#mod-content .filter-row .fb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+};
+
+function ped_renderCards() {
+  const items = S.pedidos.items;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('ped-n-activos', items.filter(p=>p.estado!=='retirado').length);
+  set('ped-n-listos',  items.filter(p=>p.estado==='listo').length);
+  set('ped-n-espera',  items.filter(p=>p.estado==='espera').length);
+  set('ped-n-retirados',items.filter(p=>p.estado==='retirado').length);
+}
+
+function ped_render() {
+  let lista = S.pedidos.items.slice();
+  const buscar = (document.getElementById('ped-buscar')?.value||'').toLowerCase();
+  if(pedFiltro==='activos')  lista = lista.filter(p=>p.estado!=='retirado');
+  else if(pedFiltro==='retirado') lista = lista.filter(p=>p.estado==='retirado');
+  else if(pedFiltro==='listo') lista = lista.filter(p=>p.estado==='listo');
+  else if(pedFiltro==='espera') lista = lista.filter(p=>p.estado==='espera');
+  if(buscar) lista = lista.filter(p=>p.cliente.toLowerCase().includes(buscar));
+  // Ordenar: primero por prioridad de estado, luego por fecha
+  const orden = {listo:0, preparar:1, espera:2, pedido:3, retirado:4};
+  lista.sort((a,b)=>(orden[a.estado]??5)-(orden[b.estado]??5)||a.fechaCarga.localeCompare(b.fechaCarga));
+  const bd=document.getElementById('ped-badge');if(bd)bd.textContent=lista.length;
+  const el=document.getElementById('ped-lista');if(!el)return;
+  if(!lista.length){el.innerHTML='<div class="empty">No hay pedidos en este filtro.</div>';return;}
+  el.innerHTML = lista.map(p => {
+    const est = ESTADOS_PEDIDO.find(e=>e.id===p.estado)||ESTADOS_PEDIDO[0];
+    const stCls = 'pedido-card st-'+p.estado;
+    const esArchivado = p.estado==='retirado';
+    // Mini selector de estado
+    const estadoSelector = ESTADOS_PEDIDO.map(e=>{
+      const actCls = p.estado===e.id ? ' active-'+e.id : '';
+      return `<button class="es-btn${actCls}" onclick="ped_cambiarEstado(${p.id},'${e.id}')" title="${e.label}">${e.icon}</button>`;
+    }).join('');
+    return `<div class="${stCls}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="pedido-nombre">${p.cliente}</div>
+          <div style="font-size:13px;color:#555;margin-top:2px">${p.desc}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <span class="pedido-estado ${est.cls}">${est.icon} ${est.label}</span>
+          <span class="pedido-stock ${p.stock==='si'?'stock-si':'stock-no'}">${p.stock==='si'?'En stock':'A pedir'}</span>
+        </div>
+      </div>
+      <div class="pedido-meta">
+        <span>📅 Cargado: ${fmtF(p.fechaCarga)}</span>
+        ${p.proveedor?`<span>🏭 ${p.proveedor}</span>`:''}
+        ${p.fProveedor?`<span>📦 Proveedor: ${fmtF(p.fProveedor)}</span>`:''}
+        ${p.fCliente?`<span>🚗 Cliente: ${fmtF(p.fCliente)}</span>`:''}
+        ${p.fechaRetiro?`<span>✅ Retirado: ${fmtF(p.fechaRetiro)}</span>`:''}
+      </div>
+      ${p.obs?`<div style="font-size:12px;color:#888;margin-bottom:8px;font-style:italic">💬 ${p.obs}</div>`:''}
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;border-top:1px solid var(--gray-mid);padding-top:10px;margin-top:4px">
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-right:4px">Estado:</span>
+          ${estadoSelector}
+        </div>
+        ${isAdmin()?`<button class="btn-s btn-del" onclick="ped_del(${p.id})" style="font-size:11px">Eliminar</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ══════════════════════════════════════════════════════════
 // CLIENTES Y PROVEEDORES
 // ══════════════════════════════════════════════════════════
@@ -2202,6 +2432,9 @@ window.cont_renderClientes = cont_renderClientes;
 window.cont_renderProvs = cont_renderProvs;
 window.cont_dlUpdate = cont_dlUpdate;
 window.renderContactos = renderContactos;
+window.renderPedidos = renderPedidos;
+window.ped_render = ped_render;
+window.ped_renderCards = ped_renderCards;
 window.fmt = fmt;
 
 // ══════════════════════════════════════════════════════════
