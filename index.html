@@ -618,10 +618,11 @@ function abrirModulo(id) {
   const mc = document.getElementById('mod-content');
   mc.innerHTML = '';
   // Render module
-  const renders = {
+    const renders = {
     dashboard: renderDash, echeqs: renderEch, caja: renderCaja,
     proveedores: renderProv, ingresos: renderIng, iva: renderIva,
-    sueldos: renderSueldos, impuestos: renderImp, usuarios: renderUsuarios
+    sueldos: renderSueldos, impuestos: renderImp, usuarios: renderUsuarios,
+    pedidos: renderPedidos, contactos: renderContactos
   };
   if(renders[id]) renders[id]();
 }
