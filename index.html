@@ -224,7 +224,7 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 }
 
 /* ── PEDIDOS ── */
-.pedido-card{background:#fff;border-radius:4px;padding:16px;margin-bottom:10px;border:1px solid var(--gray-mid);border-left:5px solid var(--gray-mid);transition:.2s;position:relative}
+.pedido-card{background:#fff;border-radius:4px;padding:20px;margin-bottom:12px;border:1px solid var(--gray-mid);border-left:6px solid var(--gray-mid);transition:.2s;position:relative}
 .pedido-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
 .pedido-card.st-pedido{border-left-color:#1a73e8}
 .pedido-card.st-preparar{border-left-color:#e37400}
@@ -242,13 +242,14 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 .pedido-stock{font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:3px}
 .stock-si{background:#e6f4ea;color:var(--green)}
 .stock-no{background:#fce8e6;color:var(--red)}
-.estado-selector{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
-.es-btn{padding:8px 4px;text-align:center;border:2px solid var(--gray-mid);border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;font-family:'Montserrat',sans-serif;text-transform:uppercase;letter-spacing:.3px;background:#fff;color:#666;line-height:1.2}
+.estado-selector{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.es-btn{padding:12px 8px;text-align:center;border:2px solid var(--gray-mid);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',sans-serif;text-transform:uppercase;letter-spacing:.3px;background:#fff;color:#666;line-height:1.4;transition:.15s;min-width:90px}
 .es-btn.active-pedido{border-color:#1a73e8;background:#e8f0fe;color:#1a73e8}
 .es-btn.active-preparar{border-color:#e37400;background:#fef7e0;color:#b06000}
 .es-btn.active-espera{border-color:#7b1fa2;background:#f3e8fd;color:#7b1fa2}
 .es-btn.active-listo{border-color:var(--gold);background:#fdf3d6;color:var(--gold-dark)}
 .es-btn.active-retirado{border-color:var(--green);background:#e6f4ea;color:var(--green)}
+.es-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
@@ -1816,8 +1817,8 @@ function imp_renderHist(){
 function renderUsuarios(){
   if(!isAdmin()){document.getElementById('mod-content').innerHTML='<div class="empty">Sin acceso.</div>';return;}
   const mc=document.getElementById('mod-content');
-  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos'];
-  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos'};
+  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','contactos'];
+  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',contactos:'Clientes y Prov.'};
   mc.innerHTML=`
     <div class="section">
       <div class="sec-title">Usuarios del sistema</div>
@@ -1844,8 +1845,8 @@ function renderUsuarios(){
 }
 function usr_renderLista(){
   const lista=S.usuarios.lista;
-  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos'];
-  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos'};
+  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','contactos'];
+  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',contactos:'Clientes y Prov.'};
   const el=document.getElementById('usuarios-lista');if(!el)return;
   el.innerHTML=lista.map(u=>`<div class="user-card">
     <div class="user-card-h">
@@ -2062,7 +2063,7 @@ function renderPedidos() {
       <div class="sec-title">Nuevo pedido</div>
       <div class="form-grid">
         <div class="fg"><label>Cliente</label><input type="text" id="ped-cliente" list="ped-cl-dl" placeholder="Nombre del cliente"/><datalist id="ped-cl-dl" class="dl-clientes"></datalist></div>
-        <div class="fg"><label>Descripción del pedido</label><input type="text" id="ped-desc" placeholder="Qué necesita..."/></div>
+        <div class="fg" style="grid-column:1/-1"><label>Descripción del pedido</label><textarea id="ped-desc" placeholder="Qué necesita... (Enter para nueva línea)" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:'Montserrat',sans-serif;resize:vertical;line-height:1.5"></textarea></div>
         <div class="fg"><label>¿Está en stock?</label><select id="ped-stock">
           <option value="si">✅ Sí, está en stock</option>
           <option value="no">❌ No, hay que pedirlo</option>
@@ -2172,7 +2173,6 @@ function ped_render() {
   else if(pedFiltro==='listo') lista = lista.filter(p=>p.estado==='listo');
   else if(pedFiltro==='espera') lista = lista.filter(p=>p.estado==='espera');
   if(buscar) lista = lista.filter(p=>p.cliente.toLowerCase().includes(buscar));
-  // Ordenar: primero por prioridad de estado, luego por fecha
   const orden = {listo:0, preparar:1, espera:2, pedido:3, retirado:4};
   lista.sort((a,b)=>(orden[a.estado]??5)-(orden[b.estado]??5)||a.fechaCarga.localeCompare(b.fechaCarga));
   const bd=document.getElementById('ped-badge');if(bd)bd.textContent=lista.length;
@@ -2181,37 +2181,44 @@ function ped_render() {
   el.innerHTML = lista.map(p => {
     const est = ESTADOS_PEDIDO.find(e=>e.id===p.estado)||ESTADOS_PEDIDO[0];
     const stCls = 'pedido-card st-'+p.estado;
-    const esArchivado = p.estado==='retirado';
-    // Mini selector de estado
+    // Botones de estado GRANDES con icono + texto
     const estadoSelector = ESTADOS_PEDIDO.map(e=>{
-      const actCls = p.estado===e.id ? ' active-'+e.id : '';
-      return `<button class="es-btn${actCls}" onclick="ped_cambiarEstado(${p.id},'${e.id}')" title="${e.label}">${e.icon}</button>`;
+      const isAct = p.estado===e.id;
+      const actCls = isAct ? ' active-'+e.id : '';
+      return `<button class="es-btn${actCls}" onclick="ped_cambiarEstado(${p.id},'${e.id}')" title="${e.label}">
+        <div style="font-size:18px;margin-bottom:3px">${e.icon}</div>
+        <div>${e.label}</div>
+      </button>`;
     }).join('');
+    // Descripción con saltos de línea
+    const descHtml = (p.desc||'').replace(/
+/g,'<br>');
     return `<div class="${stCls}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div style="flex:1;min-width:0">
           <div class="pedido-nombre">${p.cliente}</div>
-          <div style="font-size:13px;color:#555;margin-top:2px">${p.desc}</div>
+          <div style="font-size:13px;color:#444;margin-top:4px;line-height:1.5;white-space:pre-wrap">${descHtml}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
           <span class="pedido-estado ${est.cls}">${est.icon} ${est.label}</span>
           <span class="pedido-stock ${p.stock==='si'?'stock-si':'stock-no'}">${p.stock==='si'?'En stock':'A pedir'}</span>
         </div>
       </div>
       <div class="pedido-meta">
-        <span>📅 Cargado: ${fmtF(p.fechaCarga)}</span>
+        <span>📅 ${fmtF(p.fechaCarga)}</span>
         ${p.proveedor?`<span>🏭 ${p.proveedor}</span>`:''}
-        ${p.fProveedor?`<span>📦 Proveedor: ${fmtF(p.fProveedor)}</span>`:''}
+        ${p.fProveedor?`<span>📦 Prov: ${fmtF(p.fProveedor)}</span>`:''}
         ${p.fCliente?`<span>🚗 Cliente: ${fmtF(p.fCliente)}</span>`:''}
         ${p.fechaRetiro?`<span>✅ Retirado: ${fmtF(p.fechaRetiro)}</span>`:''}
       </div>
-      ${p.obs?`<div style="font-size:12px;color:#888;margin-bottom:8px;font-style:italic">💬 ${p.obs}</div>`:''}
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;border-top:1px solid var(--gray-mid);padding-top:10px;margin-top:4px">
-        <div style="display:flex;gap:4px;align-items:center">
-          <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin-right:4px">Estado:</span>
-          ${estadoSelector}
+      ${p.obs?`<div style="font-size:12px;color:#888;margin-bottom:10px;font-style:italic;padding:6px 10px;background:var(--gray-light);border-radius:3px">💬 ${p.obs}</div>`:''}
+      <div style="border-top:1px solid var(--gray-mid);padding-top:14px;margin-top:8px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:10px">Cambiar estado:</div>
+        <div class="estado-selector">${estadoSelector}</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px">
+          <button class="btn-s" onclick="ped_abrirEdit(${p.id})" style="font-size:12px;padding:6px 14px">✏ Editar</button>
+          ${isAdmin()?`<button class="btn-s btn-del" onclick="ped_del(${p.id})" style="font-size:12px;padding:6px 14px">Eliminar</button>`:''}
         </div>
-        ${isAdmin()?`<button class="btn-s btn-del" onclick="ped_del(${p.id})" style="font-size:11px">Eliminar</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -2343,6 +2350,61 @@ window.su_delInsumo = async function(id) {
   await save('sueldos');
   su_renderCards();
   su_renderInsumos();
+};
+
+
+let pedEditEstado = 'pedido';
+
+window.ped_abrirEdit = function(id) {
+  const p = S.pedidos.items.find(x=>x.id===id); if(!p) return;
+  document.getElementById('ped-edit-id').value = id;
+  document.getElementById('ped-edit-cliente').value = p.cliente||'';
+  document.getElementById('ped-edit-desc').value = p.desc||'';
+  document.getElementById('ped-edit-stock').value = p.stock||'si';
+  document.getElementById('ped-edit-prov').value = p.proveedor||'';
+  document.getElementById('ped-edit-fprov').value = p.fProveedor||'';
+  document.getElementById('ped-edit-fcli').value = p.fCliente||'';
+  document.getElementById('ped-edit-obs').value = p.obs||'';
+  pedEditEstado = p.estado||'pedido';
+  // Render estado selector en modal
+  const sel = document.getElementById('ped-edit-estado');
+  if(sel) sel.innerHTML = ESTADOS_PEDIDO.map(e=>{
+    const isAct = pedEditEstado===e.id;
+    return `<button class="es-btn${isAct?' active-'+e.id:''}" onclick="pedEditSetEstado('${e.id}',this)">
+      <div style="font-size:18px;margin-bottom:3px">${e.icon}</div>
+      <div>${e.label}</div>
+    </button>`;
+  }).join('');
+  cont_dlUpdate();
+  document.getElementById('ped-modal').classList.add('open');
+};
+
+window.pedEditSetEstado = function(est, btn) {
+  pedEditEstado = est;
+  document.querySelectorAll('#ped-edit-estado .es-btn').forEach(b=>b.className='es-btn');
+  btn.className = 'es-btn active-'+est;
+};
+
+window.ped_guardarEdit = async function() {
+  const id = parseInt(document.getElementById('ped-edit-id').value);
+  const p = S.pedidos.items.find(x=>x.id===id); if(!p){alert('Error');return;}
+  const cliente = document.getElementById('ped-edit-cliente').value.trim();
+  const desc    = document.getElementById('ped-edit-desc').value.trim();
+  if(!cliente||!desc){alert('Completá cliente y descripción');return;}
+  p.cliente    = cliente;
+  p.desc       = desc;
+  p.stock      = document.getElementById('ped-edit-stock').value;
+  p.proveedor  = document.getElementById('ped-edit-prov').value.trim();
+  p.fProveedor = document.getElementById('ped-edit-fprov').value;
+  p.fCliente   = document.getElementById('ped-edit-fcli').value;
+  p.obs        = document.getElementById('ped-edit-obs').value.trim();
+  if(pedEditEstado!==p.estado) {
+    if(pedEditEstado==='retirado'&&!p.fechaRetiro) p.fechaRetiro=hoy();
+    p.estado = pedEditEstado;
+  }
+  await save('pedidos');
+  cerrarModal('ped-modal');
+  ped_renderCards(); ped_render();
 };
 
 // ══════════════════════════════════════════════════════════
@@ -2627,6 +2689,36 @@ document.head.appendChild(tableStyle);
     <div style="display:flex;gap:10px">
       <button class="btn-p" style="flex:1" onclick="iva_guardarEdit()">Guardar cambios</button>
       <button class="btn-s" onclick="cerrarModal('iva-v-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PEDIDO -->
+<div class="modal-overlay" id="ped-modal">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-title">Editar pedido <button class="modal-close" onclick="cerrarModal('ped-modal')">✕</button></div>
+    <input type="hidden" id="ped-edit-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Cliente</label><input type="text" id="ped-edit-cliente" list="ped-edit-cl-dl"/><datalist id="ped-edit-cl-dl" class="dl-clientes"></datalist></div>
+      <div class="fg"><label>¿Está en stock?</label><select id="ped-edit-stock">
+        <option value="si">✅ Sí, está en stock</option>
+        <option value="no">❌ No, hay que pedirlo</option>
+      </select></div>
+      <div class="fg" style="grid-column:1/-1"><label>Descripción del pedido</label>
+        <textarea id="ped-edit-desc" rows="4" style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:'Montserrat',sans-serif;resize:vertical;line-height:1.5"></textarea>
+      </div>
+      <div class="fg"><label>Proveedor</label><input type="text" id="ped-edit-prov" list="ped-edit-pv-dl"/><datalist id="ped-edit-pv-dl" class="dl-proveedores"></datalist></div>
+      <div class="fg"><label>Fecha estimada proveedor</label><input type="date" id="ped-edit-fprov"/></div>
+      <div class="fg"><label>Fecha estimada cliente</label><input type="date" id="ped-edit-fcli"/></div>
+      <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><input type="text" id="ped-edit-obs"/></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Estado:</div>
+      <div class="estado-selector" id="ped-edit-estado"></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-p" style="flex:1" onclick="ped_guardarEdit()">Guardar cambios</button>
+      <button class="btn-s" onclick="cerrarModal('ped-modal')">Cancelar</button>
     </div>
   </div>
 </div>
