@@ -382,7 +382,7 @@ let S = {
   proveedores:{ pagos: [] },
   ingresos:   { items: [] },
   iva:        { ventas: [], compras: [] },
-  sueldos:    { empleados: [], pagos: [] },
+  sueldos:    { empleados: [], pagos: [], extras_generales: [] },
   impuestos:  { pagos: [] },
   usuarios:   { lista: [] },
   contactos:  { clientes: [], proveedores: [] },
@@ -417,7 +417,7 @@ async function loadAll() {
     proveedores:{ pagos: [] },
     ingresos:   { items: [] },
     iva:        { ventas: [], compras: [] },
-    sueldos:    { empleados: [], pagos: [] },
+    sueldos:    { empleados: [], pagos: [], extras_generales: [] },
     impuestos:  { pagos: [] },
     usuarios:   { lista: [] },
     contactos:  { clientes: [], proveedores: [] },
@@ -683,10 +683,11 @@ window.dashRefresh = function() {
   // Egresos (sin doble conteo: echeqs de proveedor ya están en provMes)
   const provMes = S.proveedores.pagos.filter(p=>p.estado==='pagado'&&p.fechaPago.startsWith(mes)).reduce((s,p)=>s+p.monto,0);
   const sueldosMes = S.sueldos.pagos.filter(p=>p.mes===mes).reduce((s,p)=>s+p.neto,0);
+  const insumosMes = (S.sueldos.extras_generales||[]).filter(e=>e.mes===mes).reduce((s,e)=>s+e.monto,0);
   const impMes = S.impuestos.pagos.filter(p=>p.estado==='pagado'&&(p.fpago||'').startsWith(mes)).reduce((s,p)=>s+p.monto,0);
   const echMes = S.echeqs.items.filter(e=>e.cobrado&&e.fecha.startsWith(mes)&&e.origen!=='proveedor').reduce((s,e)=>s+e.monto,0);
   const echPend = S.echeqs.items.filter(e=>!e.cobrado&&e.fecha.startsWith(mes)&&e.origen!=='proveedor').reduce((s,e)=>s+e.monto,0);
-  const totalEgr = provMes + sueldosMes + impMes + echMes;
+  const totalEgr = provMes + sueldosMes + insumosMes + impMes + echMes;
   const res = totalIng - totalEgr;
   const resColor = res >= 0 ? '#1e8e3e' : '#d93025';
   // Bloque resumen
@@ -702,6 +703,7 @@ window.dashRefresh = function() {
       <div class="dash-col-title" style="color:#d93025">↓ Egresos — ${nomMes(mes)}</div>
       <div class="dash-fila sub"><span>Proveedores pagados</span><span>${fmt(provMes)}</span></div>
       <div class="dash-fila sub"><span>Sueldos</span><span>${fmt(sueldosMes)}</span></div>
+      ${insumosMes?`<div class="dash-fila sub"><span>Insumos generales</span><span>${fmt(insumosMes)}</span></div>`:''}
       <div class="dash-fila sub"><span>Impuestos</span><span>${fmt(impMes)}</span></div>
       <div class="dash-fila sub"><span>Echeqs cobrados (manuales)</span><span>${fmt(echMes)}</span></div>
       ${echPend?`<div class="dash-fila sub" style="color:#e37400"><span>⚑ Echeqs pendientes del mes</span><span>${fmt(echPend)}</span></div>`:''}
@@ -733,6 +735,7 @@ window.dashRefresh = function() {
     <div class="dash-card">
       <div class="dash-card-title">Sueldos & banco</div>
       <div class="dash-row"><span>Sueldos del mes</span><span style="color:#d93025">${fmt(sueldosMes)}</span></div>
+      ${insumosMes?`<div class="dash-row"><span>Insumos generales</span><span style="color:var(--gold-dark)">${fmt(insumosMes)}</span></div>`:''}
       ${suPend?`<div class="dash-row" style="color:#e37400"><span>Sin pagar</span><span>${suPend}</span></div>`:''}
       <div class="dash-row"><span>Impuestos pagados</span><span style="color:#d93025">${fmt(impMes)}</span></div>
       <div class="dash-row"><span>Saldo banco</span><span>${fmt(S.echeqs.saldo)}</span></div>
@@ -1560,13 +1563,15 @@ function renderSueldos(){
   mc.innerHTML=`
     <div class="cards">
       <div class="card"><div class="card-label">Total sueldos este mes</div><div class="card-value cv-red" id="su-mes-total">$0</div></div>
+      <div class="card"><div class="card-label">Insumos del mes</div><div class="card-value cv-yellow" id="su-insumos-total">$0</div></div>
       <div class="card"><div class="card-label">Empleados activos</div><div class="card-value" id="su-cant-emp">0</div></div>
       <div class="card"><div class="card-label">Pagados este mes</div><div class="card-value cv-green" id="su-pagados">0</div></div>
       <div class="card"><div class="card-label">Pendientes</div><div class="card-value cv-yellow" id="su-pendientes">0</div></div>
     </div>
     <div class="tab-row" id="su-tw">
       <button class="tab active" onclick="setTab('su-pagar',this,'#su-wrap');su_renderPagar()">Pagar sueldos</button>
-      <button class="tab" onclick="setTab('su-empleados',this,'#su-wrap');su_renderEmps()">Gestionar empleados</button>
+      <button class="tab" onclick="setTab('su-insumos',this,'#su-wrap');su_renderInsumos()">Insumos generales</button>
+      <button class="tab" onclick="setTab('su-empleados',this,'#su-wrap');su_renderEmps()">Empleados</button>
       <button class="tab" onclick="setTab('su-hist',this,'#su-wrap')">Historial</button>
     </div>
     <div id="su-wrap">
@@ -1578,6 +1583,9 @@ function renderSueldos(){
           </div>
           <div id="su-pagar-list"><div class="empty">Sin empleados activos.</div></div>
         </div>
+      </div>
+      <div id="su-insumos" class="panel">
+        <!-- se renderiza dinámicamente -->
       </div>
       <div id="su-empleados" class="panel">
         <div class="section"><div class="sec-title">Agregar empleado</div>
@@ -1610,9 +1618,12 @@ function su_renderCards(){
   const totalMes=pagos.reduce((s,p)=>s+p.neto,0);
   const pagados=pagos.filter(p=>p.pagado).length;
   const activos=S.sueldos.empleados.filter(e=>e.activo).length;
+  const extras=S.sueldos.extras_generales||[];
+  const totalInsumos=extras.filter(e=>e.mes===mes).reduce((s,e)=>s+e.monto,0);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set('su-mes-total',fmt(totalMes));set('su-cant-emp',activos);
   set('su-pagados',pagados);set('su-pendientes',Math.max(0,activos-pagados));
+  set('su-insumos-total',fmt(totalInsumos));
 }
 function su_renderEmps(){
   const el=document.getElementById('su-emp-list');if(!el)return;
@@ -1683,13 +1694,23 @@ window.su_delEmp=async function(id){if(!isAdmin()){alert('Solo admin.');return;}
 window.su_renderHist=function(){
   const mes=document.getElementById('su-hist-mes')?.value;if(!mes)return;
   const pagos=S.sueldos.pagos.filter(p=>p.mes===mes);
+  const insumos=(S.sueldos.extras_generales||[]).filter(e=>e.mes===mes);
   const el=document.getElementById('su-hist-content');if(!el)return;
-  if(!pagos.length){el.innerHTML='<div class="empty">Sin datos para '+nomMes(mes)+'.</div>';return;}
+  if(!pagos.length&&!insumos.length){el.innerHTML='<div class="empty">Sin datos para '+nomMes(mes)+'.</div>';return;}
   const tot=pagos.reduce((s,p)=>s+p.neto,0);
+  const totIns=insumos.reduce((s,e)=>s+e.monto,0);
   el.innerHTML=`<div style="font-size:13px;font-weight:700;color:#888;margin-bottom:12px">${nomMes(mes)}</div>
     <table><thead><tr><th>Empleado</th><th style="text-align:right">Bruto</th><th style="text-align:right">Extras</th><th style="text-align:right">Desc.</th><th style="text-align:right">Neto</th><th style="text-align:center">Estado</th></tr></thead>
     <tbody>${pagos.map(p=>`<tr><td style="font-weight:700">${p.empNombre}</td><td style="text-align:right">${fmt(p.bruto)}</td><td style="text-align:right;color:#1e8e3e">${fmt(p.extras)}</td><td style="text-align:right;color:#d93025">${fmt(p.descuentos)}</td><td style="text-align:right;font-weight:700">${fmt(p.neto)}</td><td style="text-align:center"><span class="badge ${p.pagado?'b-green':'b-yellow'}">${p.pagado?'Pagado':'Pendiente'}</span></td></tr>`).join('')}</tbody>
-    <tfoot><tr><td>Total</td><td colspan="3"></td><td style="text-align:right">${fmt(tot)}</td><td></td></tr></tfoot></table>`;
+    <tfoot><tr><td>Sueldos</td><td colspan="3"></td><td style="text-align:right">${fmt(tot)}</td><td></td></tr></tfoot></table>
+    ${insumos.length?`<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:8px">Insumos generales</div>
+    <table><thead><tr><th>Categoría</th><th>Descripción</th><th style="text-align:right">Monto</th></tr></thead>
+    <tbody>${insumos.map(e=>`<tr><td style="font-weight:700">${e.categoria}</td><td style="color:#888">${e.desc||'—'}</td><td style="text-align:right;color:var(--gold-dark);font-weight:700">${fmt(e.monto)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="2">Total insumos</td><td style="text-align:right">${fmt(totIns)}</td></tr></tfoot></table>
+    <div style="margin-top:12px;padding:10px 14px;background:var(--gray-light);border-radius:3px;border-left:4px solid var(--black);display:flex;justify-content:space-between">
+      <span style="font-weight:700;font-size:13px">TOTAL GENERAL</span>
+      <span style="font-weight:700;font-size:15px">${fmt(tot+totIns)}</span>
+    </div></div>`:''}`;
 };
 
 // ══════════════════════════════════════════════════════════
@@ -2196,6 +2217,134 @@ function ped_render() {
   }).join('');
 }
 
+
+// ══════════════════════════════════════════════════════════
+// SUELDOS — INSUMOS GENERALES
+// ══════════════════════════════════════════════════════════
+const CATS_INSUMO_FIJAS = ['Escobillas','Lámparas','Baterías','Filtros'];
+
+window.su_renderInsumos = function() {
+  const mes = document.getElementById('su-mes-sel')?.value || mesPref();
+  const panel = document.getElementById('su-insumos');
+  if(!panel) return;
+  if(!S.sueldos.extras_generales) S.sueldos.extras_generales = [];
+  const insMes = S.sueldos.extras_generales.filter(e=>e.mes===mes);
+  const totalIns = insMes.reduce((s,e)=>s+e.monto,0);
+
+  // Opciones del select: fijas + las que ya se usaron libres
+  const usadas = [...new Set(S.sueldos.extras_generales.map(e=>e.categoria))];
+  const allCats = [...new Set([...CATS_INSUMO_FIJAS, ...usadas])].sort();
+
+  panel.innerHTML = `
+    <div class="section">
+      <div class="sec-title">Insumos generales — ${nomMes(mes)}</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+        <input type="month" id="ins-mes-sel" value="${mes}" style="padding:6px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;font-family:'Montserrat',sans-serif" onchange="ins_cambiarMes(this.value)"/>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-title">Cargar insumo</div>
+      <div class="form-grid">
+        <div class="fg">
+          <label>Categoría</label>
+          <select id="ins-cat">
+            ${allCats.map(c=>`<option value="${c}">${c}</option>`).join('')}
+            <option value="__libre__">+ Otra categoría...</option>
+          </select>
+        </div>
+        <div class="fg cond" id="ins-cat-libre-wrap" style="display:none">
+          <label>Nueva categoría</label>
+          <input type="text" id="ins-cat-libre" placeholder="Ej: Aceite, Filtros especiales..."/>
+        </div>
+        <div class="fg">
+          <label>Descripción</label>
+          <input type="text" id="ins-desc" placeholder="Detalle del insumo"/>
+        </div>
+        <div class="fg">
+          <label>Monto ($)</label>
+          <input type="number" id="ins-monto" step="0.01"/>
+        </div>
+        <div class="fg">
+          <label>Período</label>
+          <input type="month" id="ins-periodo" value="${mes}"/>
+        </div>
+      </div>
+      <button class="btn-p" onclick="su_guardarInsumo()">+ Agregar insumo</button>
+    </div>
+    <div class="section">
+      <div class="sec-title">
+        Insumos del mes
+        <span class="badge b-yellow">${insMes.length}</span>
+      </div>
+      ${insMes.length ? `
+        <div style="margin-bottom:12px;padding:12px 16px;background:var(--gray-light);border-radius:3px;border-left:4px solid var(--gold);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555">Total insumos del mes</span>
+          <span style="font-size:20px;font-weight:700;color:var(--gold-dark)">${fmt(totalIns)}</span>
+        </div>
+        ${insMes.map(ins=>`
+          <div class="item" style="border-left-color:var(--gold)">
+            <div class="item-h">
+              <div>
+                <span class="item-name">${ins.categoria}</span>
+                ${ins.desc ? `<div style="font-size:12px;color:#888;margin-top:2px">${ins.desc}</div>` : ''}
+              </div>
+              <span class="item-amt cv-yellow">${fmt(ins.monto)}</span>
+            </div>
+            <div class="item-foot">
+              <span class="badge b-gold">${nomMes(ins.mes)}</span>
+              ${isAdmin() ? `<button class="btn-s btn-del" onclick="su_delInsumo(${ins.id})">Eliminar</button>` : ''}
+            </div>
+          </div>`).join('')}
+      ` : '<div class="empty">Sin insumos cargados para este mes.</div>'}
+    </div>`;
+
+  // Listener para mostrar campo libre
+  const catSel = document.getElementById('ins-cat');
+  if(catSel) catSel.addEventListener('change', function(){
+    const wrap = document.getElementById('ins-cat-libre-wrap');
+    if(wrap) wrap.style.display = this.value === '__libre__' ? 'flex' : 'none';
+  });
+};
+
+window.ins_cambiarMes = function(mes) {
+  const periodoEl = document.getElementById('ins-periodo');
+  if(periodoEl) periodoEl.value = mes;
+  su_renderInsumos();
+};
+
+window.su_guardarInsumo = async function() {
+  let cat = document.getElementById('ins-cat')?.value;
+  if(cat === '__libre__') {
+    cat = document.getElementById('ins-cat-libre')?.value.trim();
+    if(!cat) { alert('Ingresá el nombre de la categoría'); return; }
+  }
+  const desc  = document.getElementById('ins-desc')?.value.trim();
+  const monto = parseFloat(document.getElementById('ins-monto')?.value) || 0;
+  const mes   = document.getElementById('ins-periodo')?.value || mesPref();
+  if(!monto) { alert('Ingresá el monto'); return; }
+  if(!S.sueldos.extras_generales) S.sueldos.extras_generales = [];
+  S.sueldos.extras_generales.push({
+    id: Date.now(),
+    categoria: cat,
+    desc,
+    monto,
+    mes
+  });
+  S.sueldos.extras_generales.sort((a,b)=>b.mes.localeCompare(a.mes));
+  await save('sueldos');
+  su_renderCards();
+  su_renderInsumos();
+};
+
+window.su_delInsumo = async function(id) {
+  if(!isAdmin()) { alert('Solo admin puede eliminar.'); return; }
+  if(!confirm('¿Eliminás este insumo?')) return;
+  S.sueldos.extras_generales = S.sueldos.extras_generales.filter(e=>e.id!==id);
+  await save('sueldos');
+  su_renderCards();
+  su_renderInsumos();
+};
+
 // ══════════════════════════════════════════════════════════
 // CLIENTES Y PROVEEDORES
 // ══════════════════════════════════════════════════════════
@@ -2427,6 +2576,8 @@ window.imp_renderCards = imp_renderCards;
 window.su_renderPagar = su_renderPagar;
 window.su_renderEmps = su_renderEmps;
 window.su_renderHist = su_renderHist;
+window.su_renderInsumos = su_renderInsumos;
+window.ins_cambiarMes = ins_cambiarMes;
 window.su_renderCards = su_renderCards;
 window.su_calcNeto = su_calcNeto;
 window.usr_renderLista = usr_renderLista;
