@@ -2058,41 +2058,62 @@ function renderPedidos() {
       <div class="card" style="border-top-color:#7b1fa2"><div class="card-label">Esperando mercad.</div><div class="card-value cv-purple" id="ped-n-espera">0</div></div>
       <div class="card" style="border-top-color:var(--green)"><div class="card-label">Retirados (total)</div><div class="card-value cv-green" id="ped-n-retirados">0</div></div>
     </div>
+    <div class="tab-row" id="ped-tw">
+      <button class="tab active" onclick="setTab('ped-activos',this,'#ped-wrap');ped_render()">📋 Activos</button>
+      <button class="tab" onclick="setTab('ped-nuevo',this,'#ped-wrap')">+ Nuevo pedido</button>
+      <button class="tab" onclick="setTab('ped-hist',this,'#ped-wrap');ped_renderHist()">📦 Historial retirados</button>
+    </div>
+    <div id="ped-wrap">
 
-    <div class="section">
-      <div class="sec-title">Nuevo pedido</div>
-      <div class="form-grid">
-        <div class="fg"><label>Cliente</label><input type="text" id="ped-cliente" list="ped-cl-dl" placeholder="Nombre del cliente"/><datalist id="ped-cl-dl" class="dl-clientes"></datalist></div>
-        <div class="fg" style="grid-column:1/-1"><label>Descripción del pedido</label><textarea id="ped-desc" placeholder="Qué necesita... (Enter para nueva línea)" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:'Montserrat',sans-serif;resize:vertical;line-height:1.5"></textarea></div>
-        <div class="fg"><label>¿Está en stock?</label><select id="ped-stock">
-          <option value="si">✅ Sí, está en stock</option>
-          <option value="no">❌ No, hay que pedirlo</option>
-        </select></div>
-        <div class="fg"><label>Proveedor</label><input type="text" id="ped-proveedor" list="ped-pv-dl" placeholder="Proveedor (si hay que pedir)"/><datalist id="ped-pv-dl" class="dl-proveedores"></datalist></div>
-        <div class="fg"><label>Fecha estimada del proveedor</label><input type="date" id="ped-fproveedor"/></div>
-        <div class="fg"><label>Fecha estimada al cliente</label><input type="date" id="ped-fcliente"/></div>
-        <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><input type="text" id="ped-obs" placeholder="Notas adicionales..."/></div>
-      </div>
-      <div style="margin-bottom:14px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Estado inicial:</div>
-        <div class="estado-selector" id="ped-nuevo-estado">
-          ${ESTADOS_PEDIDO.map(e=>`<button class="es-btn${e.id==='pedido'?' active-pedido':''}" onclick="pedSetNuevoEstado('${e.id}',this)">${e.icon}<br>${e.label}</button>`).join('')}
+      <div id="ped-activos" class="panel active">
+        <div class="section">
+          <div class="sec-title">Pedidos activos <span class="badge b-blue" id="ped-badge">0</span></div>
+          <div class="filter-row">
+            <button class="fb active" onclick="pedFiltro='activos';ped_render();pedFBtn(this)">Todos</button>
+            <button class="fb" onclick="pedFiltro='listo';ped_render();pedFBtn(this)">⭐ Listos</button>
+            <button class="fb" onclick="pedFiltro='espera';ped_render();pedFBtn(this)">🟣 Esperando</button>
+            <button class="fb" onclick="pedFiltro='preparar';ped_render();pedFBtn(this)">🟠 Preparar</button>
+            <button class="fb" onclick="pedFiltro='pedido';ped_render();pedFBtn(this)">🔵 Pedido</button>
+            <input type="text" id="ped-buscar" placeholder="Buscar cliente..." style="padding:5px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:12px;max-width:160px;font-family:'Montserrat',sans-serif" oninput="ped_render()"/>
+          </div>
+          <div id="ped-lista"></div>
         </div>
       </div>
-      <button class="btn-p" onclick="ped_guardar()">+ Registrar pedido</button>
-    </div>
 
-    <div class="section">
-      <div class="sec-title">Pedidos <span class="badge b-blue" id="ped-badge">0</span></div>
-      <div class="filter-row">
-        <button class="fb active" onclick="pedFiltro='activos';ped_render();pedFBtn(this)">Activos</button>
-        <button class="fb" onclick="pedFiltro='listo';ped_render();pedFBtn(this)">⭐ Listos</button>
-        <button class="fb" onclick="pedFiltro='espera';ped_render();pedFBtn(this)">🟣 Esperando</button>
-        <button class="fb" onclick="pedFiltro='retirado';ped_render();pedFBtn(this)">Archivados</button>
-        <button class="fb" onclick="pedFiltro='todos';ped_render();pedFBtn(this)">Todos</button>
-        <input type="text" id="ped-buscar" placeholder="Buscar cliente..." style="padding:5px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:12px;max-width:160px;font-family:'Montserrat',sans-serif" oninput="ped_render()"/>
+      <div id="ped-nuevo" class="panel">
+        <div class="section">
+          <div class="sec-title">Nuevo pedido</div>
+          <div class="form-grid">
+            <div class="fg"><label>Cliente</label><input type="text" id="ped-cliente" list="ped-cl-dl" placeholder="Nombre del cliente"/><datalist id="ped-cl-dl" class="dl-clientes"></datalist></div>
+            <div class="fg" style="grid-column:1/-1"><label>Descripción del pedido</label><textarea id="ped-desc" placeholder="Qué necesita... (Enter para nueva línea)" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:'Montserrat',sans-serif;resize:vertical;line-height:1.5"></textarea></div>
+            <div class="fg"><label>En stock</label><select id="ped-stock"><option value="si">En stock</option><option value="no">Hay que pedir</option></select></div>
+            <div class="fg"><label>Proveedor</label><input type="text" id="ped-proveedor" list="ped-pv-dl"/><datalist id="ped-pv-dl" class="dl-proveedores"></datalist></div>
+            <div class="fg"><label>Fecha estimada proveedor</label><input type="date" id="ped-fproveedor"/></div>
+            <div class="fg"><label>Fecha estimada cliente</label><input type="date" id="ped-fcliente"/></div>
+            <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><input type="text" id="ped-obs" placeholder="Notas adicionales..."/></div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Estado inicial:</div>
+            <div class="estado-selector" id="ped-nuevo-estado">
+              ${ESTADOS_PEDIDO.map(e=>'<button class="es-btn' + (e.id==='pedido'?' active-pedido':'') + '" onclick="pedSetNuevoEstado(\'' + e.id + '\',this)"><div style="font-size:18px;margin-bottom:3px">' + e.icon + '</div><div>' + e.label + '</div></button>').join('')}
+            </div>
+          </div>
+          <button class="btn-p" onclick="ped_guardar()">+ Registrar pedido</button>
+        </div>
       </div>
-      <div id="ped-lista"></div>
+
+      <div id="ped-hist" class="panel">
+        <div class="section">
+          <div class="sec-title">Historial de pedidos retirados <span class="badge b-green" id="ped-hist-badge">0</span></div>
+          <div class="filter-row">
+            <input type="text" id="ped-hist-buscar" placeholder="Buscar cliente..." style="padding:6px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;font-family:'Montserrat',sans-serif;max-width:200px" oninput="ped_renderHist()"/>
+            <input type="month" id="ped-hist-mes" style="padding:5px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:12px;font-family:'Montserrat',sans-serif" onchange="ped_renderHist()"/>
+            <button class="fb" onclick="document.getElementById('ped-hist-mes').value='';ped_renderHist()">Ver todos</button>
+          </div>
+          <div id="ped-hist-lista"><div class="empty">Seleccioná un mes o buscá un cliente.</div></div>
+        </div>
+      </div>
+
     </div>`;
 
   cont_dlUpdate();
@@ -2406,6 +2427,54 @@ window.ped_guardarEdit = async function() {
   ped_renderCards(); ped_render();
 };
 
+
+window.ped_renderHist = function() {
+  const buscar = (document.getElementById('ped-hist-buscar')?.value||'').toLowerCase();
+  const mes    = document.getElementById('ped-hist-mes')?.value||'';
+  let lista = S.pedidos.items.filter(p=>p.estado==='retirado');
+  if(buscar) lista = lista.filter(p=>p.cliente.toLowerCase().includes(buscar));
+  if(mes)    lista = lista.filter(p=>(p.fechaRetiro||p.fechaCarga||'').startsWith(mes));
+  // Sort by fechaRetiro descending
+  lista.sort((a,b)=>(b.fechaRetiro||b.fechaCarga||'').localeCompare(a.fechaRetiro||a.fechaCarga||''));
+  const bd = document.getElementById('ped-hist-badge');
+  if(bd) bd.textContent = lista.length;
+  const el = document.getElementById('ped-hist-lista');
+  if(!el) return;
+  if(!lista.length){
+    el.innerHTML='<div class="empty">No hay pedidos retirados'+(buscar?' para "'+buscar+'"':mes?' en '+mes:'')+'. </div>';
+    return;
+  }
+  // Group by month
+  let html = '';
+  let lastMes = '';
+  lista.forEach(p => {
+    const mc = (p.fechaRetiro||p.fechaCarga||'').slice(0,7);
+    if(mc !== lastMes) {
+      html += '<div class="mes-h">' + (mc ? nomMes(mc) : 'Sin fecha') + '</div>';
+      lastMes = mc;
+    }
+    const descHtml = (p.desc||'').split(String.fromCharCode(10)).join('<br>');
+    html += '<div class="pedido-card st-retirado" style="opacity:1">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">' +
+        '<div style="flex:1">' +
+          '<div class="pedido-nombre">' + p.cliente + '</div>' +
+          '<div style="font-size:13px;color:#444;margin-top:4px;line-height:1.5">' + descHtml + '</div>' +
+        '</div>' +
+        '<span class="pedido-estado pe-retirado">✅ Retirado</span>' +
+      '</div>' +
+      '<div class="pedido-meta">' +
+        '<span>📅 Cargado: ' + fmtF(p.fechaCarga) + '</span>' +
+        (p.fechaRetiro ? '<span>✅ Retirado: ' + fmtF(p.fechaRetiro) + '</span>' : '') +
+        (p.proveedor ? '<span>🏭 ' + p.proveedor + '</span>' : '') +
+        (p.fCliente ? '<span>🚗 Entrega estimada: ' + fmtF(p.fCliente) + '</span>' : '') +
+      '</div>' +
+      (p.obs ? '<div style="font-size:12px;color:#888;font-style:italic;padding:5px 10px;background:var(--gray-light);border-radius:3px;margin-top:6px">💬 ' + p.obs + '</div>' : '') +
+      (isAdmin() ? '<div style="display:flex;justify-content:flex-end;margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-mid)"><button class="btn-s btn-del" onclick="ped_del(' + p.id + ')">Eliminar</button></div>' : '') +
+    '</div>';
+  });
+  el.innerHTML = html;
+};
+
 // ══════════════════════════════════════════════════════════
 // CLIENTES Y PROVEEDORES
 // ══════════════════════════════════════════════════════════
@@ -2655,6 +2724,7 @@ window.cont_dlUpdate = cont_dlUpdate;
 window.renderContactos = renderContactos;
 window.renderPedidos = renderPedidos;
 window.ped_render = ped_render;
+window.ped_renderHist = ped_renderHist;
 window.ped_renderCards = ped_renderCards;
 window.fmt = fmt;
 
