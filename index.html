@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Lubricar Alem — Gestión</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
 :root{
   --gold:#C9A43D;
   --gold-light:#e8c86a;
@@ -2191,8 +2191,7 @@ function ped_render() {
       </button>`;
     }).join('');
     // Descripción con saltos de línea
-    const descHtml = (p.desc||'').replace(/
-/g,'<br>');
+    const descHtml = (p.desc||'').split(String.fromCharCode(10)).join('<br>');
     return `<div class="${stCls}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
         <div style="flex:1;min-width:0">
