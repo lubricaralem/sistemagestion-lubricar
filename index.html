@@ -2713,7 +2713,6 @@ window.bat_guardar = async function() {
 };
 
 window.bat_del = async function(id) {
-  if(!isAdmin()){ alert('Solo admin puede eliminar.'); return; }
   if(!confirm('¿Eliminás este registro?')) return;
   S.baterias.items = S.baterias.items.filter(b=>b.id!==id);
   await save('baterias');
@@ -2845,9 +2844,12 @@ function bat_render() {
       (dias!==null&&dias>=0?'<div class="gar-bar-wrap"><div class="gar-bar-track"><div class="gar-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div></div>':'') +
       (b.comentarios?'<div style="font-size:11px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin:6px 0">💬 '+b.comentarios+'</div>':'') +
       devPanel +
-      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--gray-mid);padding-top:8px;margin-top:8px">' +
-        '<button class="btn-s" onclick="bat_toggleDev('+b.id+')" style="font-size:11px;padding:4px 10px;'+(dev?'':'border-color:#7b1fa2;color:#7b1fa2')+'">'+(dev?'Ver devolución':'🔄 Devolución')+'</button>' +
-        (isAdmin()?'<button class="btn-s btn-del" onclick="bat_del('+b.id+')" style="font-size:11px;padding:4px 10px">Eliminar</button>':'') +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--gray-mid);padding-top:8px;margin-top:8px;flex-wrap:wrap;gap:6px">' +
+        '<button class="btn-s" onclick="bat_toggleDev('+b.id+')" style="font-size:11px;padding:4px 10px;'+(dev?'':'border-color:#7b1fa2;color:#7b1fa2')+'">'+(dev?'Ver dev.':'🔄 Devolución')+'</button>' +
+        '<div style="display:flex;gap:5px">' +
+          '<button class="btn-s" onclick="bat_abrirEdit('+b.id+')" style="font-size:11px;padding:4px 10px">✏ Editar</button>' +
+          '<button class="btn-s btn-del" onclick="bat_del('+b.id+')" style="font-size:11px;padding:4px 10px">Eliminar</button>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }
@@ -2858,6 +2860,45 @@ function bat_render() {
     ).join('') +
   '</div>';
 }
+
+
+window.bat_abrirEdit = function(id) {
+  const b = S.baterias.items.find(x=>x.id===id); if(!b) return;
+  document.getElementById('bat-edit-id').value = id;
+  document.getElementById('bat-edit-modelo').value    = b.modelo||'';
+  document.getElementById('bat-edit-cliente').value   = b.cliente||'';
+  document.getElementById('bat-edit-patente').value   = b.patente||'';
+  document.getElementById('bat-edit-fventa').value    = b.fventa||'';
+  document.getElementById('bat-edit-garantia').value  = String(b.garantia||12);
+  document.getElementById('bat-edit-fin').value       = b.fechaFin ? fmtF(b.fechaFin) : '';
+  document.getElementById('bat-edit-comentarios').value = b.comentarios||'';
+  cont_dlUpdate();
+  document.getElementById('bat-edit-modal').classList.add('open');
+};
+window.bat_editCalcFin = function() {
+  const fv = document.getElementById('bat-edit-fventa')?.value;
+  const gm = document.getElementById('bat-edit-garantia')?.value;
+  const el = document.getElementById('bat-edit-fin');
+  if(el) el.value = fv && gm ? fmtF(bat_calcFin(fv, gm)) : '';
+};
+window.bat_guardarEdit = async function() {
+  const id = parseInt(document.getElementById('bat-edit-id').value);
+  const b  = S.baterias.items.find(x=>x.id===id); if(!b){alert('Error');return;}
+  const modelo  = document.getElementById('bat-edit-modelo').value.trim();
+  const cliente = document.getElementById('bat-edit-cliente').value.trim();
+  const fventa  = document.getElementById('bat-edit-fventa').value;
+  const garantia= document.getElementById('bat-edit-garantia').value;
+  if(!modelo||!cliente||!fventa){alert('Completá modelo, cliente y fecha');return;}
+  b.modelo=modelo; b.cliente=cliente;
+  b.patente   = document.getElementById('bat-edit-patente').value.trim();
+  b.fventa    = fventa;
+  b.garantia  = parseInt(garantia);
+  b.fechaFin  = bat_calcFin(fventa, garantia);
+  b.comentarios = document.getElementById('bat-edit-comentarios').value.trim();
+  await save('baterias');
+  cerrarModal('bat-edit-modal');
+  bat_render();
+};
 
 // ══════════════════════════════════════════════════════════
 // CLIENTES Y PROVEEDORES
@@ -3151,6 +3192,27 @@ document.head.appendChild(tableStyle);
   </div>
 </div>
 
+
+<!-- MODAL EDITAR BATERÍA -->
+<div class="modal-overlay" id="bat-edit-modal">
+  <div class="modal-box" style="max-width:540px">
+    <div class="modal-title">Editar batería <button class="modal-close" onclick="cerrarModal('bat-edit-modal')">✕</button></div>
+    <input type="hidden" id="bat-edit-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Modelo de batería</label><input type="text" id="bat-edit-modelo"/></div>
+      <div class="fg"><label>Cliente</label><input type="text" id="bat-edit-cliente" list="bat-edit-cl-dl"/><datalist id="bat-edit-cl-dl" class="dl-clientes"></datalist></div>
+      <div class="fg"><label>Patente / Vehículo</label><input type="text" id="bat-edit-patente"/></div>
+      <div class="fg"><label>Fecha de venta</label><input type="date" id="bat-edit-fventa" oninput="bat_editCalcFin()"/></div>
+      <div class="fg"><label>Garantía</label><select id="bat-edit-garantia" onchange="bat_editCalcFin()"><option value="6">6 meses</option><option value="12">12 meses</option><option value="18">18 meses</option><option value="24">24 meses</option></select></div>
+      <div class="fg"><label>Vence el</label><input type="text" id="bat-edit-fin" readonly style="background:#f0f7ff;font-weight:700;color:var(--green)"/></div>
+      <div class="fg" style="grid-column:1/-1"><label>Comentarios</label><textarea id="bat-edit-comentarios" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:'Montserrat',sans-serif;resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn-p" style="flex:1" onclick="bat_guardarEdit()">Guardar cambios</button>
+      <button class="btn-s" onclick="cerrarModal('bat-edit-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL EDITAR PEDIDO -->
 <div class="modal-overlay" id="ped-modal">
   <div class="modal-box" style="max-width:600px">
