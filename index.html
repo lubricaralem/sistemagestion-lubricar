@@ -279,6 +279,15 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 .res-btn.act-reconocida{border-color:var(--green);background:#e6f4ea;color:var(--green)}
 .res-btn.act-rechazada{border-color:var(--red);background:#fce8e6;color:var(--red)}
 
+
+/* ── KANBAN GRID ── */
+.kanban-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+@media(max-width:900px){.kanban-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:580px){.kanban-grid{grid-template-columns:1fr}}
+.kanban-col{background:var(--gray-light);border-radius:6px;padding:10px;min-height:120px}
+.kanban-col-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;margin-bottom:8px;border-radius:4px;display:flex;align-items:center;justify-content:space-between}
+.kanban-col-count{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.1)}
+
 </style>
 </head>
 <body>
@@ -2188,7 +2197,7 @@ window.ped_guardar = async function() {
   ped_renderCards(); ped_render();
 };
 
-window.ped_cambiarEstado = async function(id, nuevoEstado) {
+window.ped_cambiarEstado = async function(id, nuevoEstado, evt) { if(evt) evt.stopPropagation();
   const p = S.pedidos.items.find(x=>x.id===id); if(!p) return;
   p.estado = nuevoEstado;
   if(nuevoEstado==='retirado') p.fechaRetiro = hoy();
@@ -2219,59 +2228,62 @@ function ped_renderCards() {
 function ped_render() {
   let lista = S.pedidos.items.slice();
   const buscar = (document.getElementById('ped-buscar')?.value||'').toLowerCase();
-  if(pedFiltro==='activos')  lista = lista.filter(p=>p.estado!=='retirado');
-  else if(pedFiltro==='retirado') lista = lista.filter(p=>p.estado==='retirado');
-  else if(pedFiltro==='listo') lista = lista.filter(p=>p.estado==='listo');
-  else if(pedFiltro==='espera') lista = lista.filter(p=>p.estado==='espera');
-  if(buscar) lista = lista.filter(p=>p.cliente.toLowerCase().includes(buscar));
+  if(pedFiltro==='activos')   lista = lista.filter(p=>p.estado!=='retirado');
+  else if(pedFiltro==='listo')    lista = lista.filter(p=>p.estado==='listo');
+  else if(pedFiltro==='espera')   lista = lista.filter(p=>p.estado==='espera');
+  else if(pedFiltro==='preparar') lista = lista.filter(p=>p.estado==='preparar');
+  else if(pedFiltro==='pedido')   lista = lista.filter(p=>p.estado==='pedido');
+  if(buscar) lista = lista.filter(p=>p.cliente.toLowerCase().includes(buscar)||p.desc.toLowerCase().includes(buscar));
+
+  const bd=document.getElementById('ped-badge'); if(bd) bd.textContent=lista.length;
+  const el=document.getElementById('ped-lista'); if(!el) return;
+  if(!lista.length){el.innerHTML='<div class="empty">No hay pedidos en este filtro.</div>';return;}
+
+  // Agrupar en 3 columnas tipo Trello (order-based, not by state)
   const orden = {listo:0, preparar:1, espera:2, pedido:3, retirado:4};
   lista.sort((a,b)=>(orden[a.estado]??5)-(orden[b.estado]??5)||a.fechaCarga.localeCompare(b.fechaCarga));
-  const bd=document.getElementById('ped-badge');if(bd)bd.textContent=lista.length;
-  const el=document.getElementById('ped-lista');if(!el)return;
-  if(!lista.length){el.innerHTML='<div class="empty">No hay pedidos en este filtro.</div>';return;}
-  el.innerHTML = lista.map(p => {
+
+  // Distribuir en 3 columnas
+  const cols = [[], [], []];
+  lista.forEach((p, i) => cols[i % 3].push(p));
+
+  function pedCard(p) {
     const est = ESTADOS_PEDIDO.find(e=>e.id===p.estado)||ESTADOS_PEDIDO[0];
-    const stCls = 'pedido-card st-'+p.estado;
-    // Botones de estado GRANDES con icono + texto
+    const descHtml = (p.desc||'').split(String.fromCharCode(10)).join('<br>');
     const estadoSelector = ESTADOS_PEDIDO.map(e=>{
       const isAct = p.estado===e.id;
-      const actCls = isAct ? ' active-'+e.id : '';
-      return `<button class="es-btn${actCls}" onclick="ped_cambiarEstado(${p.id},'${e.id}')" title="${e.label}">
-        <div style="font-size:18px;margin-bottom:3px">${e.icon}</div>
-        <div>${e.label}</div>
-      </button>`;
+      return '<button class="es-btn' + (isAct?' active-'+e.id:'') + '" onclick="ped_cambiarEstado('+p.id+',\''+e.id+'\',event)" title="'+e.label+'" style="min-width:auto;padding:6px 4px;flex:1"><div style="font-size:15px">'+e.icon+'</div><div style="font-size:9px">'+e.label+'</div></button>';
     }).join('');
-    // Descripción con saltos de línea
-    const descHtml = (p.desc||'').split(String.fromCharCode(10)).join('<br>');
-    return `<div class="${stCls}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-        <div style="flex:1;min-width:0">
-          <div class="pedido-nombre">${p.cliente}</div>
-          <div style="font-size:13px;color:#444;margin-top:4px;line-height:1.5;white-space:pre-wrap">${descHtml}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-          <span class="pedido-estado ${est.cls}">${est.icon} ${est.label}</span>
-          <span class="pedido-stock ${p.stock==='si'?'stock-si':'stock-no'}">${p.stock==='si'?'En stock':'A pedir'}</span>
-        </div>
-      </div>
-      <div class="pedido-meta">
-        <span>📅 ${fmtF(p.fechaCarga)}</span>
-        ${p.proveedor?`<span>🏭 ${p.proveedor}</span>`:''}
-        ${p.fProveedor?`<span>📦 Prov: ${fmtF(p.fProveedor)}</span>`:''}
-        ${p.fCliente?`<span>🚗 Cliente: ${fmtF(p.fCliente)}</span>`:''}
-        ${p.fechaRetiro?`<span>✅ Retirado: ${fmtF(p.fechaRetiro)}</span>`:''}
-      </div>
-      ${p.obs?`<div style="font-size:12px;color:#888;margin-bottom:10px;font-style:italic;padding:6px 10px;background:var(--gray-light);border-radius:3px">💬 ${p.obs}</div>`:''}
-      <div style="border-top:1px solid var(--gray-mid);padding-top:14px;margin-top:8px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:10px">Cambiar estado:</div>
-        <div class="estado-selector">${estadoSelector}</div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px">
-          <button class="btn-s" onclick="ped_abrirEdit(${p.id})" style="font-size:12px;padding:6px 14px">✏ Editar</button>
-          ${isAdmin()?`<button class="btn-s btn-del" onclick="ped_del(${p.id})" style="font-size:12px;padding:6px 14px">Eliminar</button>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+    return '<div class="pedido-card st-'+p.estado+'" id="pedcard-'+p.id+'">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:8px">' +
+        '<div style="flex:1;min-width:0"><div class="pedido-nombre" style="font-size:15px">' + p.cliente + '</div></div>' +
+        '<span class="pedido-estado ' + est.cls + '" style="font-size:10px;white-space:nowrap">' + est.icon + ' ' + est.label + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:#444;line-height:1.4;margin-bottom:8px">' + descHtml + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<span class="pedido-stock ' + (p.stock==='si'?'stock-si':'stock-no') + '">' + (p.stock==='si'?'En stock':'A pedir') + '</span>' +
+        (p.proveedor?'<span style="font-size:11px;color:#888">🏭 '+p.proveedor+'</span>':'') +
+      '</div>' +
+      '<div class="pedido-meta" style="font-size:11px">' +
+        '<span>📅 ' + fmtF(p.fechaCarga) + '</span>' +
+        (p.fCliente?'<span>🚗 '+fmtF(p.fCliente)+'</span>':'') +
+      '</div>' +
+      (p.obs?'<div style="font-size:11px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin:6px 0">💬 '+p.obs+'</div>':'') +
+      '<div style="display:flex;gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-mid)">' +
+        estadoSelector +
+      '</div>' +
+      '<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">' +
+        '<button class="btn-s" onclick="ped_abrirEdit('+p.id+')" style="font-size:11px;padding:4px 10px">✏ Editar</button>' +
+        (isAdmin()?'<button class="btn-s btn-del" onclick="ped_del('+p.id+')" style="font-size:11px;padding:4px 10px">Eliminar</button>':'') +
+      '</div>' +
+    '</div>';
+  }
+
+  el.innerHTML = '<div class="kanban-grid">' +
+    cols.map(col =>
+      '<div>' + (col.length ? col.map(pedCard).join('') : '<div style="text-align:center;color:#ccc;padding:20px;font-size:12px">—</div>') + '</div>'
+    ).join('') +
+  '</div>';
 }
 
 
@@ -2726,15 +2738,14 @@ function bat_render() {
   if(buscar) lista = lista.filter(b=>
     b.modelo.toLowerCase().includes(buscar)||b.cliente.toLowerCase().includes(buscar)
   );
-  if(batFiltro==='activas')    lista = lista.filter(b=>{ const e=bat_getEstado(b); return e.id==='activa'||e.id==='pronto'; });
+  if(batFiltro==='activas')     lista = lista.filter(b=>{ const e=bat_getEstado(b); return e.id==='activa'||e.id==='pronto'; });
   else if(batFiltro==='pronto') lista = lista.filter(b=>bat_getEstado(b).id==='pronto');
-  else if(batFiltro==='devolucion') lista = lista.filter(b=>bat_getEstado(b).id==='devolucion');
-  else if(batFiltro==='vencidas') lista = lista.filter(b=>bat_getEstado(b).id==='vencida');
+  else if(batFiltro==='devolucion') lista = lista.filter(b=>['devolucion','reconocida','rechazada'].includes(bat_getEstado(b).id));
+  else if(batFiltro==='vencidas')   lista = lista.filter(b=>bat_getEstado(b).id==='vencida');
 
-  // Sort: devoluciones primero, luego por dias restantes
+  const ord = {devolucion:0,pronto:1,activa:2,vencida:3,reconocida:4,rechazada:5};
   lista.sort((a,b)=>{
     const ea=bat_getEstado(a), eb=bat_getEstado(b);
-    const ord={devolucion:0,pronto:1,activa:2,vencida:3,reconocida:4,rechazada:5};
     if((ord[ea.id]??9)!==(ord[eb.id]??9)) return (ord[ea.id]??9)-(ord[eb.id]??9);
     return (bat_diasRestantes(a.fechaFin)??9999)-(bat_diasRestantes(b.fechaFin)??9999);
   });
@@ -2743,109 +2754,93 @@ function bat_render() {
   const el=document.getElementById('bat-lista'); if(!el) return;
   if(!lista.length){ el.innerHTML='<div class="empty">Sin baterías en este filtro.</div>'; return; }
 
-  el.innerHTML = lista.map(b => {
+  // Distribuir en 3 columnas
+  const cols = [[], [], []];
+  lista.forEach((b, i) => cols[i % 3].push(b));
+
+  function batCard(b) {
     const est   = bat_getEstado(b);
     const dias  = bat_diasRestantes(b.fechaFin);
     const pct   = b.garantia ? Math.max(0, Math.min(100, Math.round((dias/(b.garantia*30))*100))) : 0;
     const barColor = est.id==='vencida'?'#ccc': est.id==='pronto'?'var(--gold)':'var(--green)';
     const dev = b.devolucion;
-    const fdev_val   = dev?.fdev||'';
-    const fenv_val   = dev?.fenv||'';
-    const env_val    = dev?.enviado||'no';
-    const res_val    = dev?.resolucion||'pendiente';
-    const result_val = dev?.resultado||'';
-    const coment_val = dev?.comentarios||'';
+    const fdev_val=dev?.fdev||'', fenv_val=dev?.fenv||'', env_val=dev?.enviado||'no';
+    const res_val=dev?.resolucion||'pendiente', result_val=dev?.resultado||'', coment_val=dev?.comentarios||'';
 
-    return `<div class="bat-card ${est.cardCls}" id="bat-card-${b.id}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <div style="flex:1">
-          <div class="bat-modelo">${b.modelo}</div>
-          <div style="font-size:13px;color:#555;margin-top:2px">👤 ${b.cliente}${b.patente?' &nbsp;🚗 '+b.patente:''}</div>
-        </div>
-        <span class="bat-estado ${est.cls}">${est.icon} ${est.label}</span>
-      </div>
-      <div class="bat-meta">
-        <span>📅 Venta: ${fmtF(b.fventa)}</span>
-        <span>🛡 Garantía: ${b.garantia} meses</span>
-        <span>📆 Vence: <strong>${fmtF(b.fechaFin)}</strong></span>
-        ${dias!==null ? `<span style="font-weight:700;color:${barColor}">${dias>=0?dias+' días restantes':'Vencida hace '+Math.abs(dias)+' días'}</span>` : ''}
-      </div>
-      ${dias!==null && dias>=0 ? `<div class="gar-bar-wrap">
-        <div class="gar-bar-track"><div class="gar-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      </div>` : ''}
-      ${b.comentarios ? `<div style="font-size:12px;color:#888;margin:6px 0;font-style:italic;padding:5px 10px;background:var(--gray-light);border-radius:3px">💬 ${b.comentarios}</div>` : ''}
+    let devPanel = '';
+    if(dev) {
+      devPanel = '<div class="devolucion-panel" style="margin-top:10px">' +
+        '<div class="devolucion-title">🔄 Devolución en curso</div>' +
+        '<div class="form-grid" style="margin-bottom:10px">' +
+          '<div class="fg"><label>Fecha dev.</label><input type="date" id="bat-dev-fecha-'+b.id+'" value="'+fdev_val+'"/></div>' +
+          '<div class="fg"><label>Enviada a revisión</label><select id="bat-dev-enviado-'+b.id+'"><option value="no"'+(env_val==='no'?' selected':'')+'>No todavía</option><option value="si"'+(env_val==='si'?' selected':'')+'>Sí</option></select></div>' +
+          '<div class="fg"><label>Fecha envío</label><input type="date" id="bat-dev-fenv-'+b.id+'" value="'+fenv_val+'"/></div>' +
+          '<div class="fg" style="grid-column:1/-1"><label>Resultado fabricante</label><input type="text" id="bat-dev-result-'+b.id+'" value="'+result_val+'" placeholder="Qué dijeron..."/></div>' +
+          '<div class="fg" style="grid-column:1/-1"><label>Comentarios</label><input type="text" id="bat-dev-coment-'+b.id+'" value="'+coment_val+'"/></div>' +
+        '</div>' +
+        '<div style="margin-bottom:10px">' +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:6px">Resolución:</div>' +
+          '<div style="display:flex;gap:6px" id="bat-res-btns-'+b.id+'">' +
+            '<button class="res-btn'+(res_val==='pendiente'?' act-pendiente':'')+'" onclick="bat_setRes('+b.id+',\'pendiente\',this)">⏳ Pendiente</button>' +
+            '<button class="res-btn'+(res_val==='reconocida'?' act-reconocida':'')+'" onclick="bat_setRes('+b.id+',\'reconocida\',this)">✔️ Reconocida</button>' +
+            '<button class="res-btn'+(res_val==='rechazada'?' act-rechazada':'')+'" onclick="bat_setRes('+b.id+',\'rechazada\',this)">❌ Rechazada</button>' +
+          '</div>' +
+          '<input type="hidden" id="bat-dev-res-'+b.id+'" value="'+res_val+'"/>' +
+        '</div>' +
+        '<button class="btn-p" onclick="bat_guardarDev('+b.id+')" style="font-size:11px;padding:6px 14px">💾 Guardar</button>' +
+      '</div>';
+    } else {
+      devPanel = '<div id="bat-dev-panel-'+b.id+'" style="display:none;margin-top:10px">' +
+        '<div class="devolucion-panel">' +
+          '<div class="devolucion-title">🔄 Nueva devolución</div>' +
+          '<div class="form-grid" style="margin-bottom:10px">' +
+            '<div class="fg"><label>Fecha dev.</label><input type="date" id="bat-dev-fecha-'+b.id+'" value="'+hoy()+'"/></div>' +
+            '<div class="fg"><label>Enviada</label><select id="bat-dev-enviado-'+b.id+'"><option value="no">No todavía</option><option value="si">Sí</option></select></div>' +
+            '<div class="fg"><label>Fecha envío</label><input type="date" id="bat-dev-fenv-'+b.id+'"/></div>' +
+            '<div class="fg" style="grid-column:1/-1"><label>Resultado fabricante</label><input type="text" id="bat-dev-result-'+b.id+'" placeholder="Qué dijeron..."/></div>' +
+            '<div class="fg" style="grid-column:1/-1"><label>Comentarios</label><input type="text" id="bat-dev-coment-'+b.id+'"/></div>' +
+          '</div>' +
+          '<div style="margin-bottom:10px">' +
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555;margin-bottom:6px">Resolución:</div>' +
+            '<div style="display:flex;gap:6px" id="bat-res-btns-'+b.id+'">' +
+              '<button class="res-btn act-pendiente" onclick="bat_setRes('+b.id+',\'pendiente\',this)">⏳ Pendiente</button>' +
+              '<button class="res-btn" onclick="bat_setRes('+b.id+',\'reconocida\',this)">✔️ Reconocida</button>' +
+              '<button class="res-btn" onclick="bat_setRes('+b.id+',\'rechazada\',this)">❌ Rechazada</button>' +
+            '</div>' +
+            '<input type="hidden" id="bat-dev-res-'+b.id+'" value="pendiente"/>' +
+          '</div>' +
+          '<button class="btn-p" onclick="bat_guardarDev('+b.id+')" style="font-size:11px;padding:6px 14px">💾 Guardar</button>' +
+        '</div>' +
+      '</div>';
+    }
 
-      <!-- DEVOLUCIÓN ACTIVA -->
-      ${dev ? `<div class="devolucion-panel">
-        <div class="devolucion-title">🔄 Registro de devolución</div>
-        <div class="form-grid" style="margin-bottom:10px">
-          <div class="fg"><label>Fecha devolución</label>
-            <input type="date" id="bat-dev-fecha-${b.id}" value="${fdev_val}"/></div>
-          <div class="fg"><label>¿Se envió a revisión?</label>
-            <select id="bat-dev-enviado-${b.id}">
-              <option value="no" ${env_val==='no'?'selected':''}>No todavía</option>
-              <option value="si" ${env_val==='si'?'selected':''}>Sí, enviada</option>
-            </select></div>
-          <div class="fg"><label>Fecha envío a revisión</label>
-            <input type="date" id="bat-dev-fenv-${b.id}" value="${fenv_val}"/></div>
-          <div class="fg" style="grid-column:1/-1"><label>Resultado del fabricante</label>
-            <input type="text" id="bat-dev-result-${b.id}" value="${result_val}"
-              placeholder="Qué dijo el fabricante..."/></div>
-          <div class="fg" style="grid-column:1/-1"><label>Comentarios adicionales</label>
-            <input type="text" id="bat-dev-coment-${b.id}" value="${coment_val}"
-              placeholder="Notas del proceso..."/></div>
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Resolución:</div>
-          <div class="resolucion-sel" id="bat-res-btns-${b.id}">
-            <button class="res-btn act-${res_val==='pendiente'?'pendiente':'pendiente'}" onclick="bat_setRes(${b.id},'pendiente',this)" style="${res_val==='pendiente'?'border-color:#888;background:#f1f1f1;color:#555':''}">⏳ Pendiente</button>
-            <button class="res-btn" onclick="bat_setRes(${b.id},'reconocida',this)" style="${res_val==='reconocida'?'border-color:var(--green);background:#e6f4ea;color:var(--green)':''}">✔️ Reconocida</button>
-            <button class="res-btn" onclick="bat_setRes(${b.id},'rechazada',this)" style="${res_val==='rechazada'?'border-color:var(--red);background:#fce8e6;color:var(--red)':''}">❌ Rechazada</button>
-          </div>
-          <input type="hidden" id="bat-dev-res-${b.id}" value="${res_val}"/>
-        </div>
-        <button class="btn-p" onclick="bat_guardarDev(${b.id})" style="font-size:12px;padding:7px 16px">💾 Guardar devolución</button>
-      </div>` : ''}
+    return '<div class="bat-card '+est.cardCls+'">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:8px">' +
+        '<div class="bat-modelo" style="font-size:15px;flex:1">'+b.modelo+'</div>' +
+        '<span class="bat-estado '+est.cls+'" style="font-size:10px;white-space:nowrap">'+est.icon+' '+est.label+'</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:#555;margin-bottom:6px">👤 '+b.cliente+(b.patente?' &nbsp;🚗 '+b.patente:'')+'</div>' +
+      '<div class="bat-meta" style="font-size:11px">' +
+        '<span>📅 '+fmtF(b.fventa)+'</span>' +
+        '<span>🛡 '+b.garantia+'m</span>' +
+        '<span>📆 '+fmtF(b.fechaFin)+'</span>' +
+      '</div>' +
+      (dias!==null?'<div style="font-size:11px;font-weight:700;color:'+barColor+';margin:4px 0">'+(dias>=0?dias+' días restantes':'Vencida hace '+Math.abs(dias)+' días')+'</div>':'') +
+      (dias!==null&&dias>=0?'<div class="gar-bar-wrap"><div class="gar-bar-track"><div class="gar-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div></div>':'') +
+      (b.comentarios?'<div style="font-size:11px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin:6px 0">💬 '+b.comentarios+'</div>':'') +
+      devPanel +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--gray-mid);padding-top:8px;margin-top:8px">' +
+        '<button class="btn-s" onclick="bat_toggleDev('+b.id+')" style="font-size:11px;padding:4px 10px;'+(dev?'':'border-color:#7b1fa2;color:#7b1fa2')+'">'+(dev?'Ver devolución':'🔄 Devolución')+'</button>' +
+        (isAdmin()?'<button class="btn-s btn-del" onclick="bat_del('+b.id+')" style="font-size:11px;padding:4px 10px">Eliminar</button>':'') +
+      '</div>' +
+    '</div>';
+  }
 
-      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--gray-mid);padding-top:10px;margin-top:10px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;gap:8px">
-          ${!dev ? `<button class="btn-s" onclick="bat_toggleDev(${b.id})" style="font-size:12px;padding:6px 14px;border-color:#7b1fa2;color:#7b1fa2">🔄 Registrar devolución</button>` :
-                   `<button class="btn-s" onclick="bat_toggleDev(${b.id})" style="font-size:12px;padding:6px 14px">Ocultar devolución</button>`}
-        </div>
-        ${isAdmin() ? `<button class="btn-s btn-del" onclick="bat_del(${b.id})" style="font-size:12px">Eliminar</button>` : ''}
-      </div>
-
-      <!-- PANEL DEV TOGGLE (para nueva devolución) -->
-      ${!dev ? `<div id="bat-dev-panel-${b.id}" style="display:none;margin-top:12px">
-        <div class="devolucion-panel">
-          <div class="devolucion-title">🔄 Registrar devolución</div>
-          <div class="form-grid" style="margin-bottom:10px">
-            <div class="fg"><label>Fecha devolución</label>
-              <input type="date" id="bat-dev-fecha-${b.id}" value="${hoy()}"/></div>
-            <div class="fg"><label>¿Se envió a revisión?</label>
-              <select id="bat-dev-enviado-${b.id}"><option value="no">No todavía</option><option value="si">Sí, enviada</option></select></div>
-            <div class="fg"><label>Fecha envío a revisión</label>
-              <input type="date" id="bat-dev-fenv-${b.id}"/></div>
-            <div class="fg" style="grid-column:1/-1"><label>Resultado del fabricante</label>
-              <input type="text" id="bat-dev-result-${b.id}" placeholder="Qué dijo el fabricante..."/></div>
-            <div class="fg" style="grid-column:1/-1"><label>Comentarios</label>
-              <input type="text" id="bat-dev-coment-${b.id}" placeholder="Notas del proceso..."/></div>
-          </div>
-          <div style="margin-bottom:12px">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Resolución:</div>
-            <div class="resolucion-sel" id="bat-res-btns-${b.id}">
-              <button class="res-btn act-pendiente" onclick="bat_setRes(${b.id},'pendiente',this)">⏳ Pendiente</button>
-              <button class="res-btn" onclick="bat_setRes(${b.id},'reconocida',this)">✔️ Reconocida</button>
-              <button class="res-btn" onclick="bat_setRes(${b.id},'rechazada',this)">❌ Rechazada</button>
-            </div>
-            <input type="hidden" id="bat-dev-res-${b.id}" value="pendiente"/>
-          </div>
-          <button class="btn-p" onclick="bat_guardarDev(${b.id})" style="font-size:12px;padding:7px 16px">💾 Guardar devolución</button>
-        </div>
-      </div>` : ''}
-
-    </div>`;
-  }).join('');
+  el.innerHTML = '<div class="kanban-grid">' +
+    cols.map(col =>
+      '<div>' + (col.length ? col.map(batCard).join('') : '') + '</div>'
+    ).join('') +
+  '</div>';
 }
 
 // ══════════════════════════════════════════════════════════
