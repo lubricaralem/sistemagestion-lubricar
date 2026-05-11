@@ -2112,11 +2112,11 @@ function renderPedidos() {
         <div class="section">
           <div class="sec-title">Pedidos activos <span class="badge b-blue" id="ped-badge">0</span></div>
           <div class="filter-row">
-            <button class="fb active" onclick="pedFiltro='activos';ped_render();pedFBtn(this)">Todos</button>
-            <button class="fb" onclick="pedFiltro='listo';ped_render();pedFBtn(this)">⭐ Listos</button>
-            <button class="fb" onclick="pedFiltro='espera';ped_render();pedFBtn(this)">🟣 Esperando</button>
-            <button class="fb" onclick="pedFiltro='preparar';ped_render();pedFBtn(this)">🟠 Preparar</button>
-            <button class="fb" onclick="pedFiltro='pedido';ped_render();pedFBtn(this)">🔵 Pedido</button>
+            <button class="fb active" id="pfb-activos"  onclick="pedSetFiltro('activos',this)">Todos</button>
+            <button class="fb" id="pfb-listo"    onclick="pedSetFiltro('listo',this)">⭐ Listos</button>
+            <button class="fb" id="pfb-espera"   onclick="pedSetFiltro('espera',this)">🟣 Esperando</button>
+            <button class="fb" id="pfb-preparar" onclick="pedSetFiltro('preparar',this)">🟠 Preparar</button>
+            <button class="fb" id="pfb-pedido"   onclick="pedSetFiltro('pedido',this)">🔵 Pedido</button>
             <input type="text" id="ped-buscar" placeholder="Buscar cliente..." style="padding:5px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:12px;max-width:160px;font-family:'Montserrat',sans-serif" oninput="ped_render()"/>
           </div>
           <div id="ped-lista"></div>
@@ -2216,8 +2216,14 @@ window.ped_del = async function(id) {
 };
 
 window.pedFBtn = function(btn) {
-  document.querySelectorAll('#mod-content .filter-row .fb').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('#ped-activos .filter-row .fb').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+};
+window.pedSetFiltro = function(filtro, btn) {
+  pedFiltro = filtro;
+  document.querySelectorAll('#ped-activos .filter-row .fb').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  ped_render();
 };
 
 function ped_renderCards() {
@@ -2599,11 +2605,11 @@ function renderBaterias() {
         <div class="section">
           <div class="sec-title">Baterías <span class="badge b-blue" id="bat-badge">0</span></div>
           <div class="filter-row">
-            <button class="fb active" onclick="batFiltro='activas';bat_render();batFBtn(this)">✅ Activas</button>
-            <button class="fb" onclick="batFiltro='pronto';bat_render();batFBtn(this)">⚠️ Vencen pronto</button>
-            <button class="fb" onclick="batFiltro='devolucion';bat_render();batFBtn(this)">🔄 Devoluciones</button>
-            <button class="fb" onclick="batFiltro='vencidas';bat_render();batFBtn(this)">⬜ Vencidas</button>
-            <button class="fb" onclick="batFiltro='todas';bat_render();batFBtn(this)">Todas</button>
+            <button class="fb active" id="bfb-activas"    onclick="batSetFiltro('activas',this)">✅ Activas</button>
+            <button class="fb" id="bfb-pronto"       onclick="batSetFiltro('pronto',this)">⚠️ Pronto</button>
+            <button class="fb" id="bfb-devolucion"   onclick="batSetFiltro('devolucion',this)">🔄 Devoluciones</button>
+            <button class="fb" id="bfb-vencidas"     onclick="batSetFiltro('vencidas',this)">⬜ Vencidas</button>
+            <button class="fb" id="bfb-todas"        onclick="batSetFiltro('todas',this)">Todas</button>
             <input type="text" id="bat-buscar" placeholder="Buscar modelo o cliente..."
               style="padding:5px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:12px;max-width:200px;font-family:'Montserrat',sans-serif"
               oninput="bat_render()"/>
@@ -2653,8 +2659,14 @@ function renderBaterias() {
 }
 
 window.batFBtn = function(btn) {
-  document.querySelectorAll('#bat-wrap .filter-row .fb').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('#bat-lista-p .filter-row .fb').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+};
+window.batSetFiltro = function(filtro, btn) {
+  batFiltro = filtro;
+  document.querySelectorAll('#bat-lista-p .filter-row .fb').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  bat_render();
 };
 
 window.bat_calcPreview = function() {
@@ -3097,6 +3109,8 @@ window.renderContactos = renderContactos;
 window.renderBaterias = renderBaterias;
 window.bat_render = bat_render;
 window.bat_calcPreview = bat_calcPreview;
+window.pedSetFiltro = pedSetFiltro;
+window.batSetFiltro = batSetFiltro;
 window.renderPedidos = renderPedidos;
 window.ped_render = ped_render;
 window.ped_renderHist = ped_renderHist;
