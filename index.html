@@ -74,7 +74,7 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 .mod-back:hover{background:var(--gold);border-color:var(--gold);color:#fff}
 .mod-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;font-family:"Anton",sans-serif;letter-spacing:.5px;color:#fff}
 .mod-icon{font-size:20px;color:var(--gold)}
-.mod-content{padding:1rem;flex:1;overflow-y:auto;max-width:1100px;width:100%;margin:0 auto}
+.mod-content{padding:1rem;flex:1;overflow-y:auto;max-width:1300px;width:100%;margin:0 auto}
 
 /* ── COMPONENTES ── */
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.5rem}
@@ -224,13 +224,13 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 }
 
 /* ── PEDIDOS ── */
-.pedido-card{background:#fff;border-radius:4px;padding:20px;margin-bottom:12px;border:1px solid var(--gray-mid);border-left:6px solid var(--gray-mid);transition:.2s;position:relative}
+.pedido-card{background:#fff;border-radius:6px;padding:14px;margin-bottom:0;border:1px solid var(--gray-mid);border-top:4px solid var(--gray-mid);transition:.2s;position:relative;box-shadow:0 2px 6px rgba(0,0,0,.06)}
 .pedido-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
-.pedido-card.st-pedido{border-left-color:#1a73e8}
-.pedido-card.st-preparar{border-left-color:#e37400}
-.pedido-card.st-espera{border-left-color:#7b1fa2}
-.pedido-card.st-listo{border-left-color:var(--gold)}
-.pedido-card.st-retirado{border-left-color:var(--green);opacity:.6}
+.pedido-card.st-pedido{border-top-color:#1a73e8}
+.pedido-card.st-preparar{border-top-color:#e37400}
+.pedido-card.st-espera{border-top-color:#7b1fa2}
+.pedido-card.st-listo{border-top-color:var(--gold)}
+.pedido-card.st-retirado{border-top-color:var(--green);opacity:.7}
 .pedido-estado{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-family:'Montserrat',sans-serif}
 .pe-pedido{background:#e8f0fe;color:#1a73e8}
 .pe-preparar{background:#fef7e0;color:#b06000}
@@ -252,13 +252,13 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 .es-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.12)}
 
 /* ── BATERÍAS ── */
-.bat-card{background:#fff;border-radius:4px;padding:18px;margin-bottom:12px;border:1px solid var(--gray-mid);border-left:6px solid var(--gray-mid);transition:.2s}
-.bat-card.gar-activa{border-left-color:var(--green)}
-.bat-card.gar-pronto{border-left-color:var(--gold)}
-.bat-card.gar-vencida{border-left-color:#aaa}
-.bat-card.gar-devolucion{border-left-color:#7b1fa2}
-.bat-card.gar-reconocida{border-left-color:var(--green)}
-.bat-card.gar-rechazada{border-left-color:var(--red)}
+.bat-card{background:#fff;border-radius:6px;padding:14px;margin-bottom:0;border:1px solid var(--gray-mid);border-top:4px solid var(--gray-mid);transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.bat-card.gar-activa{border-top-color:var(--green)}
+.bat-card.gar-pronto{border-top-color:var(--gold)}
+.bat-card.gar-vencida{border-top-color:#aaa}
+.bat-card.gar-devolucion{border-top-color:#7b1fa2}
+ .bat-card.gar-reconocida{border-top-color:var(--green)}
+.bat-card.gar-rechazada{border-top-color:var(--red)}
 .bat-estado{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-family:'Montserrat',sans-serif}
 .be-activa{background:#e6f4ea;color:var(--green)}
 .be-pronto{background:#fdf3d6;color:var(--gold-dark);border:1px solid var(--gold-light)}
@@ -281,12 +281,16 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 
 
 /* ── KANBAN GRID ── */
-.kanban-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+.kanban-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start}
 @media(max-width:900px){.kanban-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:580px){.kanban-grid{grid-template-columns:1fr}}
-.kanban-col{background:var(--gray-light);border-radius:6px;padding:10px;min-height:120px}
-.kanban-col-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;margin-bottom:8px;border-radius:4px;display:flex;align-items:center;justify-content:space-between}
-.kanban-col-count{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.1)}
+@media(max-width:600px){.kanban-grid{grid-template-columns:1fr}}
+/* Dentro de cada columna las cards fluyen normalmente */
+.kanban-grid > div{display:flex;flex-direction:column;gap:12px}
+/* Ajustes de card en kanban */
+.pedido-card{padding:14px;margin-bottom:0}
+.bat-card{padding:14px;margin-bottom:0}
+/* Botones de estado más compactos */
+.es-btn{padding:6px 2px;min-width:0;font-size:9px;letter-spacing:0;border-radius:4px;flex:1;text-align:center;line-height:1.2}
 
 </style>
 </head>
@@ -2269,7 +2273,7 @@ function ped_render() {
         (p.fCliente?'<span>🚗 '+fmtF(p.fCliente)+'</span>':'') +
       '</div>' +
       (p.obs?'<div style="font-size:11px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin:6px 0">💬 '+p.obs+'</div>':'') +
-      '<div style="display:flex;gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-mid)">' +
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-mid)">' +
         estadoSelector +
       '</div>' +
       '<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">' +
