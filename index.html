@@ -508,7 +508,7 @@ onAuthStateChanged(auth, async (user) => {
   }
   // If no users configured yet, first login becomes admin
   if (S.usuarios.lista.length === 0) {
-    const newAdmin = { id: Date.now(), nombre: user.displayName || email, user: email.split('@')[0], email, rol: 'admin', pestanas: ['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','contactos','usuarios'] };
+    const newAdmin = { id: Date.now(), nombre: user.displayName || email, user: email.split('@')[0], email, rol: 'admin', pestanas: ['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','contactos','usuarios'] };
     S.usuarios.lista.push(newAdmin);
     await save('usuarios');
     currentUser = { ...newAdmin, name: user.displayName || email, photo: user.photoURL };
@@ -1847,8 +1847,8 @@ function imp_renderHist(){
 function renderUsuarios(){
   if(!isAdmin()){document.getElementById('mod-content').innerHTML='<div class="empty">Sin acceso.</div>';return;}
   const mc=document.getElementById('mod-content');
-  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','contactos'];
-  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',contactos:'Clientes y Prov.'};
+  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','contactos'];
+  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',baterias:'Baterías',contactos:'Clientes y Prov.'};
   mc.innerHTML=`
     <div class="section">
       <div class="sec-title">Usuarios del sistema</div>
@@ -1875,8 +1875,8 @@ function renderUsuarios(){
 }
 function usr_renderLista(){
   const lista=S.usuarios.lista;
-  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','contactos'];
-  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',contactos:'Clientes y Prov.'};
+  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','contactos'];
+  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',baterias:'Baterías',contactos:'Clientes y Prov.'};
   const el=document.getElementById('usuarios-lista');if(!el)return;
   el.innerHTML=lista.map(u=>`<div class="user-card">
     <div class="user-card-h">
