@@ -2209,8 +2209,9 @@ window.ped_cambiarEstado = async function(id, nuevoEstado, evt) { if(evt) evt.st
 };
 
 window.ped_del = async function(id) {
-  if(!isAdmin()){alert('Solo admin puede eliminar.');return;}
-  if(!confirm('¿Eliminás este pedido?'))return;
+  const p = S.pedidos.items.find(x=>x.id===id);
+  const nombre = p ? p.cliente + ' — ' + (p.desc||'').slice(0,40) : 'este pedido';
+  if(!confirm('¿Eliminás definitivamente el pedido de ' + nombre + '?\n\nEsta acción no se puede deshacer.')) return;
   S.pedidos.items = S.pedidos.items.filter(x=>x.id!==id);
   await save('pedidos'); ped_renderCards(); ped_render();
 };
@@ -2282,9 +2283,9 @@ function ped_render() {
       '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-mid)">' +
         estadoSelector +
       '</div>' +
-      '<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">' +
-        '<button class="btn-s" onclick="ped_abrirEdit('+p.id+')" style="font-size:11px;padding:4px 10px">✏ Editar</button>' +
-        (isAdmin()?'<button class="btn-s btn-del" onclick="ped_del('+p.id+')" style="font-size:11px;padding:4px 10px">Eliminar</button>':'') +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px dashed var(--gray-mid)">' +
+        '<button class="btn-s" onclick="ped_abrirEdit('+p.id+')" style="font-size:11px;padding:5px 12px">✏ Editar</button>' +
+        '<button class="btn-s" onclick="ped_del('+p.id+')" style="font-size:10px;padding:4px 8px;color:#bbb;border-color:#e0e0e0" title="Eliminar pedido">🗑</button>' +
       '</div>' +
     '</div>';
   }
@@ -2713,7 +2714,9 @@ window.bat_guardar = async function() {
 };
 
 window.bat_del = async function(id) {
-  if(!confirm('¿Eliminás este registro?')) return;
+  const b = S.baterias.items.find(x=>x.id===id);
+  const nombre = b ? b.modelo + ' — ' + b.cliente : 'esta batería';
+  if(!confirm('¿Eliminás ' + nombre + '?\n\nEsta acción no se puede deshacer.')) return;
   S.baterias.items = S.baterias.items.filter(b=>b.id!==id);
   await save('baterias');
   bat_render();
