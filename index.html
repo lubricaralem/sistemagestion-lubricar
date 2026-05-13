@@ -756,7 +756,7 @@ window.dashRefresh = function() {
   if(da) da.innerHTML = msgs.map(m=>`<div class="alert-box alert-danger show" style="margin-bottom:6px">${m}</div>`).join('');
   // Ingresos
   const cajMes = S.caja.cierres.filter(c=>c.fecha.startsWith(mes)).reduce((s,c)=>s+c.total,0);
-  const ingMes = S.ingresos.items.filter(i=>i.estado==='acreditado'&&(i.fechaCobro||i.fechaRec).startsWith(mes)).reduce((s,i)=>s+i.monto,0);
+  const ingMes = S.ingresos.items.filter(i=>i.estado==='acreditado'&&i.fechaRec.startsWith(mes)).reduce((s,i)=>s+i.monto,0);
   const totalIng = cajMes + ingMes;
   // Egresos (sin doble conteo: echeqs de proveedor ya están en provMes)
   const provMes = S.proveedores.pagos.filter(p=>p.estado==='pagado'&&p.fechaPago.startsWith(mes)).reduce((s,p)=>s+p.monto,0);
@@ -1443,7 +1443,7 @@ window.i_del=async function(id){if(!isAdmin()){alert('Solo el admin puede elimin
 function i_renderCards(){
   const h=hoy(),m=manana(),mes=mesPref();
   const pend=S.ingresos.items.filter(i=>i.estado!=='acreditado');
-  const acMes=S.ingresos.items.filter(i=>i.estado==='acreditado'&&(i.fechaCobro||i.fechaRec).startsWith(mes));
+  const acMes=S.ingresos.items.filter(i=>i.estado==='acreditado'&&i.fechaRec.startsWith(mes));
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=fmt(v);};
   const setn=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set('i-mes',acMes.reduce((s,i)=>s+i.monto,0));set('i-pend-t',pend.reduce((s,i)=>s+i.monto,0));
