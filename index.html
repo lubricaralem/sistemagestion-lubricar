@@ -292,6 +292,12 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 /* Botones de estado más compactos */
 .es-btn{padding:6px 2px;min-width:0;font-size:9px;letter-spacing:0;border-radius:4px;flex:1;text-align:center;line-height:1.2}
 
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--black);color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;font-family:'Montserrat',sans-serif;font-weight:600;z-index:9999;display:none;align-items:center;gap:8px;border-left:4px solid var(--gold);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.toast.show{display:flex}
+.toast.error{border-left-color:var(--red)}
+
 </style>
 </head>
 <body>
@@ -451,8 +457,31 @@ async function fbGet(mod) {
 async function fbSet(mod, value) {
   await setDoc(doc(db, 'gestion', mod), { value });
 }
-async function save(mod) {
-  await fbSet(mod, S[mod]);
+
+let toastTimer = null;
+function showToast(msg, isError=false) {
+  const t = document.getElementById('app-toast');
+  if(!t) return;
+  t.textContent = msg;
+  t.className = 'toast show' + (isError?' error':'');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.classList.remove('show'); }, 2500);
+}
+
+async function save(mod, retries=3) {
+  for(let attempt=1; attempt<=retries; attempt++) {
+    try {
+      await setDoc(doc(db, 'gestion', mod), { value: S[mod] });
+      return; // success
+    } catch(e) {
+      console.error('Save attempt '+attempt+' failed for '+mod+':', e);
+      if(attempt === retries) {
+        alert('⚠ Error al guardar en Firebase ('+mod+'). Verificá tu conexión y volvé a intentarlo.');
+        throw e;
+      }
+      await new Promise(r => setTimeout(r, 800 * attempt)); // wait before retry
+    }
+  }
 }
 async function loadAll() {
   const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos','baterias','mercaderia'];
@@ -1396,7 +1425,20 @@ window.i_guardar=async function(){
   ['i-origen','i-monto','i-fcobro','i-num','i-banco','i-conc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   i_renderCards(); i_renderPend(); i_renderHist();
 };
-window.i_toggle=async function(id){const i=S.ingresos.items.find(x=>x.id===id);if(!i)return;i.estado=i.estado==='acreditado'?'pendiente':'acreditado';await save('ingresos');i_renderCards();i_renderPend();i_renderHist();};
+window.i_toggle=async function(id){
+  const i=S.ingresos.items.find(x=>x.id===id);if(!i)return;
+  const nuevoEstado=i.estado==='acreditado'?'pendiente':'acreditado';
+  i.estado=nuevoEstado;
+  try {
+    await save('ingresos');
+    showToast('✓ Guardado correctamente');
+    i_renderCards();i_renderPend();i_renderHist();
+  } catch(e) {
+    // Revert on failure
+    i.estado=i.estado==='acreditado'?'pendiente':'acreditado';
+    i_renderCards();i_renderPend();i_renderHist();
+  }
+};
 window.i_del=async function(id){if(!isAdmin()){alert('Solo el admin puede eliminar.');return;}if(!confirm('¿Eliminás?'))return;S.ingresos.items=S.ingresos.items.filter(i=>i.id!==id);await save('ingresos');i_dlUpdate();i_renderCards();i_renderPend();i_renderHist();};
 function i_renderCards(){
   const h=hoy(),m=manana(),mes=mesPref();
@@ -3598,6 +3640,8 @@ document.head.appendChild(tableStyle);
     </div>
   </div>
 </div>
+
+<div class="toast" id="app-toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
