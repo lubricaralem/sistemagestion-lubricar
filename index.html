@@ -2821,38 +2821,41 @@ function bat_render() {
   if(buscar) lista = lista.filter(b=>
     b.modelo.toLowerCase().includes(buscar)||b.cliente.toLowerCase().includes(buscar)
   );
-  if(batFiltro==='activas')     lista = lista.filter(b=>{ const e=bat_getEstado(b); return e.id==='activa'||e.id==='pronto'; });
-  else if(batFiltro==='pronto') lista = lista.filter(b=>bat_getEstado(b).id==='pronto');
+  if(batFiltro==='activas')         lista = lista.filter(b=>{ const e=bat_getEstado(b); return e.id==='activa'||e.id==='pronto'; });
+  else if(batFiltro==='pronto')     lista = lista.filter(b=>bat_getEstado(b).id==='pronto');
   else if(batFiltro==='devolucion') lista = lista.filter(b=>['devolucion','reconocida','rechazada'].includes(bat_getEstado(b).id));
   else if(batFiltro==='vencidas')   lista = lista.filter(b=>bat_getEstado(b).id==='vencida');
 
-  const ord = {devolucion:0,pronto:1,activa:2,vencida:3,reconocida:4,rechazada:5};
-  lista.sort((a,b)=>{
-    const ea=bat_getEstado(a), eb=bat_getEstado(b);
-    if((ord[ea.id]??9)!==(ord[eb.id]??9)) return (ord[ea.id]??9)-(ord[eb.id]??9);
-    return (bat_diasRestantes(a.fechaFin)??9999)-(bat_diasRestantes(b.fechaFin)??9999);
-  });
+  // Ordenar por fecha de venta más reciente primero
+  lista.sort((a,b) => (b.fventa||'').localeCompare(a.fventa||''));
 
   const bd=document.getElementById('bat-badge'); if(bd) bd.textContent=lista.length;
   const el=document.getElementById('bat-lista'); if(!el) return;
   if(!lista.length){ el.innerHTML='<div class="empty">Sin baterías en este filtro.</div>'; return; }
 
-  // Distribuir en 3 columnas
-  const cols = [[], [], []];
-  lista.forEach((b, i) => cols[i % 3].push(b));
+  let html = '';
+  let lastMes = '';
 
-  function batCard(b) {
+  lista.forEach(b => {
+    // Separador por mes
+    const mc = (b.fventa||'').slice(0,7);
+    if(mc !== lastMes) {
+      html += '<div class="mes-h">' + (mc ? nomMes(mc) : 'Sin fecha') + '</div>';
+      lastMes = mc;
+    }
+
     const est   = bat_getEstado(b);
     const dias  = bat_diasRestantes(b.fechaFin);
     const pct   = b.garantia ? Math.max(0, Math.min(100, Math.round((dias/(b.garantia*30))*100))) : 0;
     const barColor = est.id==='vencida'?'#ccc': est.id==='pronto'?'var(--gold)':'var(--green)';
-    const dev = b.devolucion;
+    const dev   = b.devolucion;
     const fdev_val=dev?.fdev||'', fenv_val=dev?.fenv||'', env_val=dev?.enviado||'no';
     const res_val=dev?.resolucion||'pendiente', result_val=dev?.resultado||'', coment_val=dev?.comentarios||'';
 
     let devPanel = '';
     if(dev) {
-      devPanel = '<div class="devolucion-panel" style="margin-top:10px">' +
+      devPanel =
+        '<div class="devolucion-panel" style="margin-top:10px">' +
         '<div class="devolucion-title">🔄 Devolución en curso</div>' +
         '<div class="form-grid" style="margin-bottom:10px">' +
           '<div class="fg"><label>Fecha dev.</label><input type="date" id="bat-dev-fecha-'+b.id+'" value="'+fdev_val+'"/></div>' +
@@ -2871,9 +2874,10 @@ function bat_render() {
           '<input type="hidden" id="bat-dev-res-'+b.id+'" value="'+res_val+'"/>' +
         '</div>' +
         '<button class="btn-p" onclick="bat_guardarDev('+b.id+')" style="font-size:11px;padding:6px 14px">💾 Guardar</button>' +
-      '</div>';
+        '</div>';
     } else {
-      devPanel = '<div id="bat-dev-panel-'+b.id+'" style="display:none;margin-top:10px">' +
+      devPanel =
+        '<div id="bat-dev-panel-'+b.id+'" style="display:none;margin-top:10px">' +
         '<div class="devolucion-panel">' +
           '<div class="devolucion-title">🔄 Nueva devolución</div>' +
           '<div class="form-grid" style="margin-bottom:10px">' +
@@ -2894,24 +2898,36 @@ function bat_render() {
           '</div>' +
           '<button class="btn-p" onclick="bat_guardarDev('+b.id+')" style="font-size:11px;padding:6px 14px">💾 Guardar</button>' +
         '</div>' +
-      '</div>';
+        '</div>';
     }
 
-    return '<div class="bat-card '+est.cardCls+'">' +
-      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:8px">' +
-        '<div class="bat-modelo" style="font-size:15px;flex:1">'+b.modelo+'</div>' +
-        '<span class="bat-estado '+est.cls+'" style="font-size:10px;white-space:nowrap">'+est.icon+' '+est.label+'</span>' +
+    html +=
+      '<div class="bat-card '+est.cardCls+'">' +
+      // Header: modelo + estado badge
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:0">' +
+          '<span style="font-weight:700;font-size:15px">'+b.modelo+'</span>' +
+          '<span style="font-size:12px;color:#555;margin-left:10px">👤 '+b.cliente+(b.patente?' &nbsp;🚗 '+b.patente:'')+'</span>' +
+        '</div>' +
+        '<span class="bat-estado '+est.cls+'">'+est.icon+' '+est.label+'</span>' +
       '</div>' +
-      '<div style="font-size:12px;color:#555;margin-bottom:6px">👤 '+b.cliente+(b.patente?' &nbsp;🚗 '+b.patente:'')+'</div>' +
-      '<div class="bat-meta" style="font-size:11px">' +
-        '<span>📅 '+fmtF(b.fventa)+'</span>' +
-        '<span>🛡 '+b.garantia+'m</span>' +
-        '<span>📆 '+fmtF(b.fechaFin)+'</span>' +
+      // Meta row
+      '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#888;margin-bottom:6px">' +
+        '<span>📅 Venta: <strong style="color:#444">'+fmtF(b.fventa)+'</strong></span>' +
+        '<span>🛡 '+b.garantia+' meses</span>' +
+        '<span>📆 Vence: <strong style="color:'+barColor+'">'+fmtF(b.fechaFin)+'</strong></span>' +
+        (dias!==null?'<span style="font-weight:700;color:'+barColor+'">'+(dias>=0?dias+' días restantes':'Vencida hace '+Math.abs(dias)+' días')+'</span>':'') +
       '</div>' +
-      (dias!==null?'<div style="font-size:11px;font-weight:700;color:'+barColor+';margin:4px 0">'+(dias>=0?dias+' días restantes':'Vencida hace '+Math.abs(dias)+' días')+'</div>':'') +
-      (dias!==null&&dias>=0?'<div class="gar-bar-wrap"><div class="gar-bar-track"><div class="gar-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div></div>':'') +
-      (b.comentarios?'<div style="font-size:11px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin:6px 0">💬 '+b.comentarios+'</div>':'') +
+      // Barra progreso (solo si tiene días)
+      (dias!==null&&dias>=0?
+        '<div style="height:5px;background:#eee;border-radius:3px;margin-bottom:8px;overflow:hidden">' +
+          '<div style="height:5px;border-radius:3px;background:'+barColor+';width:'+pct+'%"></div>' +
+        '</div>' : '') +
+      // Comentarios
+      (b.comentarios?'<div style="font-size:12px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin-bottom:8px">💬 '+b.comentarios+'</div>':'') +
+      // Panel devolución
       devPanel +
+      // Footer acciones
       '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--gray-mid);padding-top:8px;margin-top:8px;flex-wrap:wrap;gap:6px">' +
         '<button class="btn-s" onclick="bat_toggleDev('+b.id+')" style="font-size:11px;padding:4px 10px;'+(dev?'':'border-color:#7b1fa2;color:#7b1fa2')+'">'+(dev?'Ver dev.':'🔄 Devolución')+'</button>' +
         '<div style="display:flex;gap:5px">' +
@@ -2919,14 +2935,10 @@ function bat_render() {
           '<button class="btn-s btn-del" onclick="bat_del('+b.id+')" style="font-size:11px;padding:4px 10px">Eliminar</button>' +
         '</div>' +
       '</div>' +
-    '</div>';
-  }
+      '</div>';
+  });
 
-  el.innerHTML = '<div class="kanban-grid">' +
-    cols.map(col =>
-      '<div>' + (col.length ? col.map(batCard).join('') : '') + '</div>'
-    ).join('') +
-  '</div>';
+  el.innerHTML = html;
 }
 
 
