@@ -298,6 +298,17 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 .toast.show{display:flex}
 .toast.error{border-left-color:var(--red)}
 
+
+/* ── PROVEEDOR CARD ── */
+.prov-card{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--gold)}
+.prov-card-nombre{font-size:15px;font-weight:700;margin-bottom:4px}
+.prov-datos{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px 16px;margin-top:8px}
+.prov-dato{display:flex;flex-direction:column;gap:2px}
+.prov-dato-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#aaa}
+.prov-dato-val{font-size:13px;font-weight:600;color:#333}
+.prov-dato-val.copyable{cursor:pointer;display:flex;align-items:center;gap:5px}
+.prov-dato-val.copyable:hover{color:var(--gold-dark)}
+
 </style>
 </head>
 <body>
@@ -3357,8 +3368,6 @@ function renderContactos() {
       <button class="tab" onclick="setTab('cont-provs',this,'#cont-wrap')">🧾 Proveedores</button>
     </div>
     <div id="cont-wrap">
-
-      <!-- CLIENTES -->
       <div id="cont-clientes" class="panel active">
         <div class="section">
           <div class="sec-title">Agregar cliente</div>
@@ -3368,32 +3377,23 @@ function renderContactos() {
           </div>
         </div>
         <div class="section">
-          <div class="sec-title">Lista de clientes <span class="badge b-blue" id="cl-badge">0</span></div>
+          <div class="sec-title">Clientes <span class="badge b-blue" id="cl-badge">0</span></div>
           <div class="filter-row">
-            <input type="text" id="cl-buscar" placeholder="Buscar cliente..." style="padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;min-width:200px" oninput="cont_renderClientes()"/>
+            <input type="text" id="cl-buscar" placeholder="Buscar cliente..." style="padding:6px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;min-width:200px;font-family:Montserrat,sans-serif" oninput="cont_renderClientes()"/>
           </div>
           <div id="cl-lista"></div>
         </div>
       </div>
-
-      <!-- PROVEEDORES -->
       <div id="cont-provs" class="panel">
         <div class="section">
-          <div class="sec-title">Agregar proveedor</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-            <div class="fg" style="flex:1;min-width:180px"><label>Nombre del proveedor</label><input type="text" id="pv-nuevo-nombre" placeholder="Nombre o razón social"/></div>
-            <button class="btn-p" onclick="cont_agregarProv()">+ Agregar</button>
-          </div>
-        </div>
-        <div class="section">
-          <div class="sec-title">Lista de proveedores <span class="badge b-yellow" id="pv-cont-badge">0</span></div>
+          <div class="sec-title">Proveedores <span class="badge b-yellow" id="pv-cont-badge">0</span></div>
           <div class="filter-row">
-            <input type="text" id="pv-buscar" placeholder="Buscar proveedor..." style="padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;min-width:200px" oninput="cont_renderProvs()"/>
+            <input type="text" id="pv-buscar" placeholder="Buscar proveedor..." style="padding:6px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;min-width:200px;font-family:Montserrat,sans-serif" oninput="cont_renderProvs()"/>
+            <button class="btn-p" onclick="prov_abrirNuevo()" style="white-space:nowrap">+ Nuevo proveedor</button>
           </div>
           <div id="pv-lista"></div>
         </div>
       </div>
-
     </div>`;
   cont_renderClientes();
   cont_renderProvs();
@@ -3402,27 +3402,12 @@ function renderContactos() {
 window.cont_agregarCliente = async function() {
   const nombre = document.getElementById('cl-nuevo-nombre').value.trim();
   if(!nombre){alert('Ingresá el nombre');return;}
-  if(S.contactos.clientes.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase())){
-    alert('Ya existe ese cliente.');return;
-  }
+  if(S.contactos.clientes.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase())){alert('Ya existe ese cliente.');return;}
   S.contactos.clientes.push({id:Date.now(), nombre});
   S.contactos.clientes.sort((a,b)=>a.nombre.localeCompare(b.nombre));
   await save('contactos');
   document.getElementById('cl-nuevo-nombre').value='';
   cont_renderClientes(); cont_dlUpdate();
-};
-
-window.cont_agregarProv = async function() {
-  const nombre = document.getElementById('pv-nuevo-nombre').value.trim();
-  if(!nombre){alert('Ingresá el nombre');return;}
-  if(S.contactos.proveedores.find(p=>p.nombre.toLowerCase()===nombre.toLowerCase())){
-    alert('Ya existe ese proveedor.');return;
-  }
-  S.contactos.proveedores.push({id:Date.now(), nombre});
-  S.contactos.proveedores.sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  await save('contactos');
-  document.getElementById('pv-nuevo-nombre').value='';
-  cont_renderProvs(); cont_dlUpdate();
 };
 
 window.cont_delCliente = async function(id) {
@@ -3434,19 +3419,92 @@ window.cont_delCliente = async function(id) {
 
 window.cont_delProv = async function(id) {
   if(!isAdmin()){alert('Solo admin puede eliminar.');return;}
-  if(!confirm('¿Eliminás este proveedor?'))return;
+  const p = S.contactos.proveedores.find(x=>x.id===id);
+  if(!confirm('¿Eliminás ' + (p?p.nombre:'este proveedor') + '?'))return;
   S.contactos.proveedores = S.contactos.proveedores.filter(p=>p.id!==id);
   await save('contactos'); cont_renderProvs(); cont_dlUpdate();
 };
+
+// Abrir modal nuevo proveedor
+window.prov_abrirNuevo = function() {
+  const tl=document.getElementById('prov-modal-label'); if(tl) tl.textContent='Nuevo proveedor';
+  document.getElementById('prov-edit-id').value = '';
+  ['prov-nombre','prov-cuit','prov-contacto','prov-tel','prov-email','prov-dir',
+   'prov-banco','prov-nro-cuenta','prov-cbu','prov-alias','prov-cuit-banco','prov-obs'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('prov-tipo-cuenta').value='';
+  document.getElementById('prov-modal').classList.add('open');
+};
+
+// Abrir modal editar proveedor
+window.prov_abrirEditar = function(id) {
+  const p = S.contactos.proveedores.find(x=>x.id===id); if(!p) return;
+  const tl=document.getElementById('prov-modal-label'); if(tl) tl.textContent='Editar proveedor';
+  document.getElementById('prov-edit-id').value = id;
+  const set = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
+  set('prov-nombre',     p.nombre);
+  set('prov-cuit',       p.cuit);
+  set('prov-contacto',   p.contacto);
+  set('prov-tel',        p.tel);
+  set('prov-email',      p.email);
+  set('prov-dir',        p.dir);
+  set('prov-banco',      p.banco);
+  set('prov-tipo-cuenta',p.tipoCuenta);
+  set('prov-nro-cuenta', p.nroCuenta);
+  set('prov-cbu',        p.cbu);
+  set('prov-alias',      p.alias);
+  set('prov-cuit-banco', p.cuitBanco);
+  set('prov-obs',        p.obs);
+  document.getElementById('prov-modal').classList.add('open');
+};
+
+window.prov_guardarModal = async function() {
+  const nombre = document.getElementById('prov-nombre').value.trim();
+  if(!nombre){alert('El nombre es obligatorio');return;}
+  const editId = document.getElementById('prov-edit-id').value;
+  const datos = {
+    nombre,
+    cuit:       document.getElementById('prov-cuit').value.trim(),
+    contacto:   document.getElementById('prov-contacto').value.trim(),
+    tel:        document.getElementById('prov-tel').value.trim(),
+    email:      document.getElementById('prov-email').value.trim(),
+    dir:        document.getElementById('prov-dir').value.trim(),
+    banco:      document.getElementById('prov-banco').value.trim(),
+    tipoCuenta: document.getElementById('prov-tipo-cuenta').value,
+    nroCuenta:  document.getElementById('prov-nro-cuenta').value.trim(),
+    cbu:        document.getElementById('prov-cbu').value.trim(),
+    alias:      document.getElementById('prov-alias').value.trim(),
+    cuitBanco:  document.getElementById('prov-cuit-banco').value.trim(),
+    obs:        document.getElementById('prov-obs').value.trim(),
+  };
+  if(editId) {
+    const idx = S.contactos.proveedores.findIndex(p=>p.id===parseInt(editId));
+    if(idx>=0) S.contactos.proveedores[idx] = { ...S.contactos.proveedores[idx], ...datos };
+  } else {
+    if(S.contactos.proveedores.find(p=>p.nombre.toLowerCase()===nombre.toLowerCase())){
+      if(!confirm('Ya existe un proveedor con ese nombre. ¿Igual lo agregás?'))return;
+    }
+    S.contactos.proveedores.push({ id:Date.now(), ...datos });
+  }
+  S.contactos.proveedores.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  await save('contactos');
+  cerrarModal('prov-modal');
+  cont_renderProvs(); cont_dlUpdate();
+  showToast('✓ Proveedor guardado');
+};
+
+function copiar(txt, label) {
+  navigator.clipboard.writeText(txt).then(()=>showToast('✓ '+label+' copiado')).catch(()=>{});
+}
 
 function cont_renderClientes() {
   const buscar = (document.getElementById('cl-buscar')?.value||'').toLowerCase();
   let lista = S.contactos.clientes;
   if(buscar) lista = lista.filter(c=>c.nombre.toLowerCase().includes(buscar));
-  const bd = document.getElementById('cl-badge');
-  if(bd) bd.textContent = S.contactos.clientes.length;
+  const bd = document.getElementById('cl-badge'); if(bd) bd.textContent = S.contactos.clientes.length;
   const el = document.getElementById('cl-lista');if(!el)return;
-  if(!lista.length){el.innerHTML='<div class="empty">'+(buscar?'Sin resultados.':'No hay clientes cargados. Agregá uno arriba.')+'</div>';return;}
+  if(!lista.length){el.innerHTML='<div class="empty">'+(buscar?'Sin resultados.':'No hay clientes. Agregá uno arriba.')+'</div>';return;}
   el.innerHTML = lista.map(c=>`
     <div class="item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
       <span style="font-weight:600;font-size:14px">👤 ${c.nombre}</span>
@@ -3457,16 +3515,47 @@ function cont_renderClientes() {
 function cont_renderProvs() {
   const buscar = (document.getElementById('pv-buscar')?.value||'').toLowerCase();
   let lista = S.contactos.proveedores;
-  if(buscar) lista = lista.filter(p=>p.nombre.toLowerCase().includes(buscar));
-  const bd = document.getElementById('pv-cont-badge');
-  if(bd) bd.textContent = S.contactos.proveedores.length;
+  if(buscar) lista = lista.filter(p=>
+    p.nombre.toLowerCase().includes(buscar)||
+    (p.cuit||'').includes(buscar)||
+    (p.banco||'').toLowerCase().includes(buscar)
+  );
+  const bd = document.getElementById('pv-cont-badge'); if(bd) bd.textContent = S.contactos.proveedores.length;
   const el = document.getElementById('pv-lista');if(!el)return;
-  if(!lista.length){el.innerHTML='<div class="empty">'+(buscar?'Sin resultados.':'No hay proveedores cargados. Agregá uno arriba.')+'</div>';return;}
-  el.innerHTML = lista.map(p=>`
-    <div class="item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px">
-      <span style="font-weight:600;font-size:14px">🧾 ${p.nombre}</span>
-      ${isAdmin()?`<button class="btn-s btn-del" onclick="cont_delProv(${p.id})">Eliminar</button>`:''}
-    </div>`).join('');
+  if(!lista.length){el.innerHTML='<div class="empty">'+(buscar?'Sin resultados.':'No hay proveedores. Usá "+ Nuevo proveedor".')+'</div>';return;}
+  el.innerHTML = lista.map(p=>{
+    const tieneBank = p.cbu||p.alias||p.banco||p.nroCuenta;
+    const tieneDatos = p.cuit||p.contacto||p.tel||p.email;
+    return `<div class="prov-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="prov-card-nombre">🧾 ${p.nombre}</div>
+          ${p.cuit?`<div style="font-size:12px;color:#888">CUIT: <strong>${p.cuit}</strong></div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn-s" onclick="prov_abrirEditar(${p.id})" style="font-size:11px;padding:4px 10px">✏ Editar</button>
+          ${isAdmin()?`<button class="btn-s btn-del" onclick="cont_delProv(${p.id})" style="font-size:11px;padding:4px 10px">Eliminar</button>`:''}
+        </div>
+      </div>
+      ${tieneDatos?`<div class="prov-datos">
+        ${p.contacto?`<div class="prov-dato"><span class="prov-dato-label">Contacto</span><span class="prov-dato-val">👤 ${p.contacto}</span></div>`:''}
+        ${p.tel?`<div class="prov-dato"><span class="prov-dato-label">Teléfono</span><span class="prov-dato-val copyable" onclick="copiar('${p.tel}','Teléfono')">📞 ${p.tel} 📋</span></div>`:''}
+        ${p.email?`<div class="prov-dato"><span class="prov-dato-label">Email</span><span class="prov-dato-val copyable" onclick="copiar('${p.email}','Email')">✉ ${p.email} 📋</span></div>`:''}
+        ${p.dir?`<div class="prov-dato" style="grid-column:1/-1"><span class="prov-dato-label">Dirección</span><span class="prov-dato-val">📍 ${p.dir}</span></div>`:''}
+      </div>`:''}
+      ${tieneBank?`<div style="margin-top:10px;padding:10px 12px;background:var(--gray-light);border-radius:4px;border-left:3px solid var(--gold)">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:8px">💳 Datos bancarios</div>
+        <div class="prov-datos">
+          ${p.banco?`<div class="prov-dato"><span class="prov-dato-label">Banco</span><span class="prov-dato-val">${p.banco}${p.tipoCuenta?' — '+p.tipoCuenta:''}</span></div>`:''}
+          ${p.nroCuenta?`<div class="prov-dato"><span class="prov-dato-label">N° Cuenta</span><span class="prov-dato-val copyable" onclick="copiar('${p.nroCuenta}','N° Cuenta')">${p.nroCuenta} 📋</span></div>`:''}
+          ${p.cbu?`<div class="prov-dato"><span class="prov-dato-label">CBU</span><span class="prov-dato-val copyable" onclick="copiar('${p.cbu}','CBU')">${p.cbu} 📋</span></div>`:''}
+          ${p.alias?`<div class="prov-dato"><span class="prov-dato-label">Alias</span><span class="prov-dato-val copyable" onclick="copiar('${p.alias}','Alias')">${p.alias} 📋</span></div>`:''}
+          ${p.cuitBanco?`<div class="prov-dato"><span class="prov-dato-label">CUIT titular</span><span class="prov-dato-val">${p.cuitBanco}</span></div>`:''}
+        </div>
+      </div>`:''}
+      ${p.obs?`<div style="font-size:12px;color:#888;margin-top:8px;font-style:italic">💬 ${p.obs}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
 // ── EDITAR VENTA IVA ──
@@ -3569,6 +3658,10 @@ window.isAdmin = isAdmin;
 window.cont_renderClientes = cont_renderClientes;
 window.cont_renderProvs = cont_renderProvs;
 window.cont_dlUpdate = cont_dlUpdate;
+window.prov_abrirNuevo = prov_abrirNuevo;
+window.prov_abrirEditar = prov_abrirEditar;
+window.prov_guardarModal = prov_guardarModal;
+window.copiar = copiar;
 window.renderContactos = renderContactos;
 window.renderBaterias = renderBaterias;
 window.renderMercaderia = renderMercaderia;
@@ -3623,6 +3716,47 @@ document.head.appendChild(tableStyle);
 </div>
 
 
+
+<!-- MODAL PROVEEDOR -->
+<div class="modal-overlay" id="prov-modal">
+  <div class="modal-box" style="max-width:580px">
+    <div class="modal-title"><span id="prov-modal-label">Nuevo proveedor</span><button class="modal-close" onclick="cerrarModal('prov-modal')">✕</button></div>
+    <input type="hidden" id="prov-edit-id"/>
+    <div class="sec-title" style="margin-bottom:10px">Datos generales</div>
+    <div class="form-grid" style="margin-bottom:16px">
+      <div class="fg"><label>Nombre / Razón social *</label><input type="text" id="prov-nombre" placeholder="Ej: YPF SA"/></div>
+      <div class="fg"><label>CUIT</label><input type="text" id="prov-cuit" placeholder="20-12345678-9"/></div>
+      <div class="fg"><label>Contacto / Representante</label><input type="text" id="prov-contacto" placeholder="Nombre del contacto"/></div>
+      <div class="fg"><label>Teléfono</label><input type="text" id="prov-tel" placeholder="Ej: 011 4444-5555"/></div>
+      <div class="fg" style="grid-column:1/-1"><label>Email</label><input type="email" id="prov-email" placeholder="proveedor@email.com"/></div>
+      <div class="fg" style="grid-column:1/-1"><label>Dirección</label><input type="text" id="prov-dir" placeholder="Calle, número, ciudad"/></div>
+    </div>
+    <div class="sec-title" style="margin-bottom:10px">Datos bancarios</div>
+    <div class="form-grid" style="margin-bottom:16px">
+      <div class="fg"><label>Banco</label><input type="text" id="prov-banco" placeholder="Ej: Banco Nación"/></div>
+      <div class="fg"><label>Tipo de cuenta</label>
+        <select id="prov-tipo-cuenta">
+          <option value="">— Seleccionar —</option>
+          <option value="CC $">CC Pesos</option>
+          <option value="CA $">CA Pesos</option>
+          <option value="CC USD">CC Dólares</option>
+          <option value="CA USD">CA Dólares</option>
+        </select>
+      </div>
+      <div class="fg"><label>N° de cuenta</label><input type="text" id="prov-nro-cuenta" placeholder="Ej: 123-456789/0"/></div>
+      <div class="fg"><label>CBU</label><input type="text" id="prov-cbu" placeholder="22 dígitos"/></div>
+      <div class="fg"><label>Alias</label><input type="text" id="prov-alias" placeholder="Ej: PERRO.GATO.CASA"/></div>
+      <div class="fg"><label>CUIL/CUIT titular</label><input type="text" id="prov-cuit-banco" placeholder="Si difiere del CUIT"/></div>
+    </div>
+    <div class="fg" style="margin-bottom:16px"><label>Observaciones</label>
+      <textarea id="prov-obs" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;font-family:Montserrat,sans-serif;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-p" style="flex:1" onclick="prov_guardarModal()">Guardar proveedor</button>
+      <button class="btn-s" onclick="cerrarModal('prov-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL EDITAR BATERÍA -->
 <div class="modal-overlay" id="bat-edit-modal">
   <div class="modal-box" style="max-width:540px">
