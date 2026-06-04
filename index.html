@@ -309,6 +309,23 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 .prov-dato-val.copyable{cursor:pointer;display:flex;align-items:center;gap:5px}
 .prov-dato-val.copyable:hover{color:var(--gold-dark)}
 
+
+/* ── SERVICES ── */
+.srv-card{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:14px 16px;margin-bottom:8px;border-left:4px solid #1a73e8}
+.srv-patente{font-size:18px;font-weight:700;letter-spacing:1px;color:var(--black);font-family:Montserrat,sans-serif}
+.srv-vehiculo{font-size:13px;color:#555;margin-top:2px}
+.srv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px 16px;margin-top:10px}
+.srv-campo{display:flex;flex-direction:column;gap:1px}
+.srv-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#aaa}
+.srv-val{font-size:12px;font-weight:600;color:#333}
+.srv-ok{color:var(--green)}.srv-no{color:#ccc}
+.ficha-modal .srv-patente{font-size:24px;margin-bottom:4px}
+.ficha-header{background:var(--black);color:#fff;padding:16px 20px;border-radius:4px 4px 0 0;border-bottom:3px solid var(--gold)}
+.srv-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1rem}
+.srv-stat{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:12px;text-align:center}
+.srv-stat-n{font-size:22px;font-weight:700;color:var(--gold-dark)}
+.srv-stat-l{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:.5px;margin-top:2px}
+
 </style>
 </head>
 <body>
@@ -448,7 +465,8 @@ let S = {
   contactos:  { clientes: [], proveedores: [] },
   pedidos:    { items: [] },
   baterias:   { items: [] },
-  mercaderia:  { items: [] }
+  mercaderia:  { items: [] },
+  services:    { items: [] }
 };
 let modActual = null;
 
@@ -514,7 +532,7 @@ async function safeSaveArray(mod, arrayKey, newItems) {
   }
 }
 async function loadAll() {
-  const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos','baterias','mercaderia'];
+  const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos','baterias','mercaderia','services'];
   const defaults = {
     echeqs:     { saldo: 0, saldoFecha: null, items: [] },
     caja:       { cierres: [] },
@@ -527,7 +545,8 @@ async function loadAll() {
     contactos:  { clientes: [], proveedores: [] },
     pedidos:    { items: [] },
     baterias:   { items: [] },
-    mercaderia:  { items: [] }
+    mercaderia:  { items: [] },
+    services:    { items: [] }
   };
   for (const m of mods) {
     const d = await fbGet(m);
@@ -582,7 +601,7 @@ onAuthStateChanged(auth, async (user) => {
   }
   // If no users configured yet, first login becomes admin
   if (S.usuarios.lista.length === 0) {
-    const newAdmin = { id: Date.now(), nombre: user.displayName || email, user: email.split('@')[0], email, rol: 'admin', pestanas: ['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','mercaderia','contactos','usuarios'] };
+    const newAdmin = { id: Date.now(), nombre: user.displayName || email, user: email.split('@')[0], email, rol: 'admin', pestanas: ['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','mercaderia','services','contactos','usuarios'] };
     S.usuarios.lista.push(newAdmin);
     await save('usuarios');
     currentUser = { ...newAdmin, name: user.displayName || email, photo: user.photoURL };
@@ -647,7 +666,7 @@ window.importarDatos = async function(input) {
     try {
       const data = JSON.parse(e.target.result);
       showLoading('Importando datos...');
-      const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos','baterias','mercaderia'];
+      const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos','baterias','mercaderia','services'];
       for (const k of mods) { if(data[k]) { S[k]=data[k]; await save(k); } }
       hideLoading();
       buildMenu();
@@ -674,6 +693,7 @@ const MODULOS = [
   { id:'usuarios',    icon:'⚙️', title:'Usuarios',      desc:'Control de acceso y permisos.', adminOnly:true },
   { id:'baterias',    icon:'🔋', title:'Baterías',               desc:'Seguimiento de garantías y devoluciones.' },
   { id:'mercaderia',  icon:'📦', title:'Pedidos Mercadería',      desc:'Ítems pendientes de pedir, agrupados por proveedor.' },
+  { id:'services',    icon:'🔧', title:'Services',               desc:'Historial de services por patente, cliente y modelo.' },
   { id:'contactos',   icon:'📇', title:'Clientes y Proveedores', desc:'Listas de clientes y proveedores para autocompletar.' },
 ];
 
@@ -730,7 +750,7 @@ function abrirModulo(id) {
     dashboard: renderDash, echeqs: renderEch, caja: renderCaja,
     proveedores: renderProv, ingresos: renderIng, iva: renderIva,
     sueldos: renderSueldos, impuestos: renderImp, usuarios: renderUsuarios,
-    pedidos: renderPedidos, contactos: renderContactos, baterias: renderBaterias, mercaderia: renderMercaderia
+    pedidos: renderPedidos, contactos: renderContactos, baterias: renderBaterias, mercaderia: renderMercaderia, services: renderServices
   };
   if(renders[id]) renders[id]();
 }
@@ -1935,8 +1955,8 @@ function imp_renderHist(){
 function renderUsuarios(){
   if(!isAdmin()){document.getElementById('mod-content').innerHTML='<div class="empty">Sin acceso.</div>';return;}
   const mc=document.getElementById('mod-content');
-  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','mercaderia','contactos'];
-  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',baterias:'Baterías',mercaderia:'Pedidos Mercadería',contactos:'Clientes y Prov.'};
+  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','mercaderia','services','contactos'];
+  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',baterias:'Baterías',mercaderia:'Pedidos Mercadería',services:'Services',contactos:'Clientes y Prov.'};
   mc.innerHTML=`
     <div class="section">
       <div class="sec-title">Usuarios del sistema</div>
@@ -1963,8 +1983,8 @@ function renderUsuarios(){
 }
 function usr_renderLista(){
   const lista=S.usuarios.lista;
-  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','mercaderia','contactos'];
-  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',baterias:'Baterías',mercaderia:'Pedidos Mercadería',contactos:'Clientes y Prov.'};
+  const TABS=['dashboard','echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','pedidos','baterias','mercaderia','services','contactos'];
+  const LABELS={dashboard:'Resumen',echeqs:'Echeqs',caja:'Caja',proveedores:'Proveedores',ingresos:'Ingresos',iva:'IVA',sueldos:'Sueldos',impuestos:'Impuestos',pedidos:'Pedidos',baterias:'Baterías',mercaderia:'Pedidos Mercadería',services:'Services',contactos:'Clientes y Prov.'};
   const el=document.getElementById('usuarios-lista');if(!el)return;
   el.innerHTML=lista.map(u=>`<div class="user-card">
     <div class="user-card-h">
@@ -3334,6 +3354,1186 @@ window.merc_renderHist = function() {
   }).join('');
 };
 
+
+// ══════════════════════════════════════════════════════════
+// SERVICES — HISTORIAL DE SERVICES
+// ══════════════════════════════════════════════════════════
+
+// Services se guarda en colección separada para manejar gran volumen
+let srvBuscar = '';
+let srvFiltroTipo = 'todos'; // todos | patente | cliente | modelo
+let srvPagina = 0;
+const SRV_POR_PAG = 30;
+
+function srvGetItems() {
+  return S.services?.items || [];
+}
+
+function renderServices() {
+  const mc = document.getElementById('mod-content');
+  const items = srvGetItems();
+  const totalServices = items.length;
+  const patentes = new Set(items.map(s=>s.patente)).size;
+  const clientes = new Set(items.filter(s=>s.cliente).map(s=>s.cliente.toLowerCase())).size;
+  const modelos = new Set(items.map(s=>(s.vehiculo+' '+s.modelo).trim().toLowerCase())).size;
+
+  mc.innerHTML = `
+    <div class="srv-stat-grid">
+      <div class="srv-stat"><div class="srv-stat-n">${totalServices.toLocaleString('es-AR')}</div><div class="srv-stat-l">Services totales</div></div>
+      <div class="srv-stat"><div class="srv-stat-n">${patentes.toLocaleString('es-AR')}</div><div class="srv-stat-l">Patentes únicas</div></div>
+      <div class="srv-stat"><div class="srv-stat-n">${clientes.toLocaleString('es-AR')}</div><div class="srv-stat-l">Clientes</div></div>
+      <div class="srv-stat"><div class="srv-stat-n">${modelos.toLocaleString('es-AR')}</div><div class="srv-stat-l">Modelos</div></div>
+    </div>
+
+    <div class="tab-row" id="srv-tw">
+      <button class="tab active" onclick="setTab('srv-buscar-p',this,'#srv-wrap');srv_renderBuscar()">🔍 Buscar</button>
+      <button class="tab" onclick="setTab('srv-nuevo-p',this,'#srv-wrap')">+ Nuevo service</button>
+      <button class="tab" onclick="setTab('srv-stats-p',this,'#srv-wrap');srv_renderStats()">📊 Estadísticas</button>
+      <button class="tab" onclick="setTab('srv-import-p',this,'#srv-wrap')">⬆ Importar Excel</button>
+    </div>
+    <div id="srv-wrap">
+
+      <!-- BUSCAR -->
+      <div id="srv-buscar-p" class="panel active">
+        <div class="section">
+          <div class="sec-title">Buscar services</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <button class="fb active" id="sfb-todos"    onclick="srvSetFiltro('todos',this)">Todos</button>
+            <button class="fb" id="sfb-patente"  onclick="srvSetFiltro('patente',this)">Por patente</button>
+            <button class="fb" id="sfb-cliente"  onclick="srvSetFiltro('cliente',this)">Por cliente</button>
+            <button class="fb" id="sfb-modelo"   onclick="srvSetFiltro('modelo',this)">Por modelo</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+            <input type="text" id="srv-search-input"
+              placeholder="Escribí patente, cliente o modelo..."
+              style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--gray-mid);border-radius:3px;font-size:14px;font-family:Montserrat,sans-serif"
+              oninput="srv_search(this.value)"/>
+            <button class="btn-p" onclick="srv_search(document.getElementById('srv-search-input').value)">Buscar</button>
+          </div>
+          <div id="srv-resultados"><div class="empty">Ingresá una patente, nombre de cliente o modelo para buscar.</div></div>
+        </div>
+      </div>
+
+      <!-- NUEVO SERVICE -->
+      <div id="srv-nuevo-p" class="panel">
+        <div class="section" style="max-width:700px;margin:0 auto">
+          <div style="background:var(--black);padding:16px 20px;border-radius:4px 4px 0 0;border-bottom:3px solid var(--gold);margin:-1.1rem -1.25rem 1.25rem">
+            <div style="font-size:18px;font-weight:700;font-family:Montserrat,sans-serif;color:#fff">Lubricar Alem</div>
+            <div style="font-size:12px;color:#aaa;margin-top:2px">Lubricentro - Alem 615 - Zárate, Buenos Aires.</div>
+          </div>
+
+          <!-- 1. Patente -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">1. Patente <span style="color:var(--red)">*</span></label>
+            <input type="text" id="snv-patente" placeholder="ABC123"
+              style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:15px;font-family:Montserrat,sans-serif;text-transform:uppercase;margin-top:6px;background:#fff"
+              oninput="srv_autocompletarPatente(this.value)"/>
+          </div>
+
+          <!-- 2. KM -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">2. KM</label>
+            <input type="number" id="snv-km" placeholder="Kilómetros actuales"
+              style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:15px;font-family:Montserrat,sans-serif;margin-top:6px;background:#fff"/>
+          </div>
+
+          <!-- 3. Código de Service -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">3. Código de Service</label>
+            <input type="text" id="snv-codigo" placeholder="Se genera automáticamente"
+              style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:15px;font-family:Montserrat,sans-serif;margin-top:6px;background:#f8f8f8" readonly/>
+          </div>
+
+          <!-- 4. Nombre | Empresa -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">4. Nombre | Empresa</label>
+            <div style="margin-top:6px;border:1px solid var(--gray-mid);border-radius:4px;overflow:hidden">
+              <select id="snv-cliente-sel" style="width:100%;padding:10px 12px;border:none;font-size:14px;font-family:Montserrat,sans-serif;background:#fff" onchange="srv_onEmpresaSel(this.value)">
+<option value="">— Seleccionar —</option>
+<option value="Administracion y Servicios Express">Administracion y Servicios Express</option>
+<option value="Aguas Corletti">Aguas Corletti</option>
+<option value="Aguas de Zárate">Aguas de Zárate</option>
+<option value="Aislazar">Aislazar</option>
+<option value="Aisther">Aisther</option>
+<option value="Androvial">Androvial</option>
+<option value="Áridos del Norte">Áridos del Norte</option>
+<option value="Basa Ingeniería">Basa Ingeniería</option>
+<option value="Bersabar">Bersabar</option>
+<option value="Bomberos">Bomberos</option>
+<option value="Campo Aviar">Campo Aviar</option>
+<option value="Casa Respiggi">Casa Respiggi</option>
+<option value="CATRINACIO">CATRINACIO</option>
+<option value="Comp. Naviera Horamar">Comp. Naviera Horamar</option>
+<option value="concaro">concaro</option>
+<option value="Confida">Confida</option>
+<option value="Consultora OSP">Consultora OSP</option>
+<option value="Coop. de Trabajo Solucionar">Coop. de Trabajo Solucionar</option>
+<option value="Cooperativa Eléctrica de Zárate">Cooperativa Eléctrica de Zárate</option>
+<option value="Cosema">Cosema</option>
+<option value="Cutters SA">Cutters SA</option>
+<option value="Cym internet">Cym internet</option>
+<option value="Daylan">Daylan</option>
+<option value="Desdelsur">Desdelsur</option>
+<option value="Di Battista">Di Battista</option>
+<option value="Direc. Gen. Cultura y Educacion">Direc. Gen. Cultura y Educacion</option>
+<option value="DKKOMUR">DKKOMUR</option>
+<option value="El Angar">El Angar</option>
+<option value="El Ombú">El Ombú</option>
+<option value="Emgotrans">Emgotrans</option>
+<option value="Entre">Entre</option>
+<option value="FACSA">FACSA</option>
+<option value="Fantin">Fantin</option>
+<option value="FERROZINC">FERROZINC</option>
+<option value="Fersa Maderas">Fersa Maderas</option>
+<option value="Fioranelli">Fioranelli</option>
+<option value="FREYSSINET">FREYSSINET</option>
+<option value="Gas Milena">Gas Milena</option>
+<option value="Gomez Gustavo">Gomez Gustavo</option>
+<option value="Grup Cam">Grup Cam</option>
+<option value="Grupo FIP">Grupo FIP</option>
+<option value="Grupo Kosim">Grupo Kosim</option>
+<option value="Grupo La Ribera">Grupo La Ribera</option>
+<option value="IMAG">IMAG</option>
+<option value="Indufer">Indufer</option>
+<option value="Instituto Nefrologico">Instituto Nefrologico</option>
+<option value="INTERDING">INTERDING</option>
+<option value="Itsa">Itsa</option>
+<option value="JCV Tour">JCV Tour</option>
+<option value="Jorge Prieto">Jorge Prieto</option>
+<option value="Kozdon">Kozdon</option>
+<option value="La Rocha SRL">La Rocha SRL</option>
+<option value="Lima Video Cable">Lima Video Cable</option>
+<option value="Lopez y Caratino">Lopez y Caratino</option>
+<option value="Malpeza">Malpeza</option>
+<option value="Mapa Vial">Mapa Vial</option>
+<option value="MAS Sistemas Constructivos">MAS Sistemas Constructivos</option>
+<option value="Mecanizado Fam">Mecanizado Fam</option>
+<option value="Megatools">Megatools</option>
+<option value="Metal Centrum">Metal Centrum</option>
+<option value="MNG">MNG</option>
+<option value="Municipalidad de Zárate">Municipalidad de Zárate</option>
+<option value="Neumalarg">Neumalarg</option>
+<option value="Nucleoeléctrica">Nucleoeléctrica</option>
+<option value="One Bus">One Bus</option>
+<option value="Out Size">Out Size</option>
+<option value="Pantano">Pantano</option>
+<option value="Paolineli">Paolineli</option>
+<option value="Pastas Cracco">Pastas Cracco</option>
+<option value="Placemem">Placemem</option>
+<option value="Power Records">Power Records</option>
+<option value="Prestaciones Medicas">Prestaciones Medicas</option>
+<option value="Ramirez Jimena">Ramirez Jimena</option>
+<option value="Reginato">Reginato</option>
+<option value="Salud Medica Laboral">Salud Medica Laboral</option>
+<option value="Seija Fabián">Seija Fabián</option>
+<option value="Seija Gustavo">Seija Gustavo</option>
+<option value="Semisa">Semisa</option>
+<option value="Senderos">Senderos</option>
+<option value="Sist. Integ. Sguridad">Sist. Integ. Sguridad</option>
+<option value="Star Distribuciones">Star Distribuciones</option>
+<option value="Star Game">Star Game</option>
+<option value="STM Compressor">STM Compressor</option>
+<option value="Style Car">Style Car</option>
+<option value="Tártara">Tártara</option>
+<option value="Technos">Technos</option>
+<option value="Tecnocomp">Tecnocomp</option>
+<option value="Tecnologia en Impresion">Tecnologia en Impresion</option>
+<option value="The Clean Garden">The Clean Garden</option>
+<option value="Transecologica">Transecologica</option>
+<option value="Transecológica">Transecológica</option>
+<option value="Uzwil">Uzwil</option>
+<option value="Vareamal">Vareamal</option>
+<option value="Vitco">Vitco</option>
+<option value="Yarte">Yarte</option>
+<option value="Zaplast">Zaplast</option>
+<option value="Zárate Asistencia">Zárate Asistencia</option>
+<option value="Zárate Center Cargo">Zárate Center Cargo</option>
+<option value="Zárate Premium Car">Zárate Premium Car</option>
+<option value="Zarate Transporte SAPEM">Zarate Transporte SAPEM</option>
+<option value="Zarcam">Zarcam</option>
+<option value="__otro__">Otro...</option>
+              </select>
+            </div>
+            <div id="snv-cliente-otro-wrap" style="display:none;margin-top:8px">
+              <input type="text" id="snv-cliente-otro" placeholder="Escribí el nombre..."
+                style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:14px;font-family:Montserrat,sans-serif"/>
+            </div>
+            <input type="hidden" id="snv-cliente"/>
+          </div>
+
+          <!-- 5. Teléfono -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">5. Teléfono</label>
+            <input type="text" id="snv-tel" style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:15px;font-family:Montserrat,sans-serif;margin-top:6px;background:#fff"/>
+          </div>
+
+          <!-- 6. Vehículo -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">6. Vehículo</label>
+            <div style="margin-top:6px;border:1px solid var(--gray-mid);border-radius:4px;overflow:hidden">
+              <select id="snv-vehiculo-sel" style="width:100%;padding:10px 12px;border:none;font-size:14px;font-family:Montserrat,sans-serif;background:#fff" onchange="srv_onVehiculoSel(this.value)">
+<option value="">— Seleccionar —</option>
+<option value="ALFA ROMEO MITO">ALFA ROMEO MITO</option>
+<option value="AUDI A1 1,4 TFSI">AUDI A1 1,4 TFSI</option>
+<option value="AUDI A3 II 2,0 TFSI">AUDI A3 II 2,0 TFSI</option>
+<option value="AUDI A3 II 1,6">AUDI A3 II 1,6</option>
+<option value="AUDI A3 II 1,8">AUDI A3 II 1,8</option>
+<option value="AUDI A3 II 1,4 TFSI">AUDI A3 II 1,4 TFSI</option>
+<option value="AUDI A3 II 1,9 TDI">AUDI A3 II 1,9 TDI</option>
+<option value="AUDI A3 II 1,9 SPORTBACK">AUDI A3 II 1,9 SPORTBACK</option>
+<option value="Q7 3,0 TFSI">Q7 3,0 TFSI</option>
+<option value="AUDI A4 2.0 TFSI">AUDI A4 2.0 TFSI</option>
+<option value="BMW 320i">BMW 320i</option>
+<option value="BMW X1 2,5 (2015->)">BMW X1 2,5 (2015->)</option>
+<option value="BMW X1 2.0">BMW X1 2.0</option>
+<option value="BMW X1 2,5 (2009->)">BMW X1 2,5 (2009->)</option>
+<option value="BMW SERIE 3 325i 2,5">BMW SERIE 3 325i 2,5</option>
+<option value="BMW 330i 2.0 2018->">BMW 330i 2.0 2018-></option>
+<option value="BMW 330i 2.0 2012->">BMW 330i 2.0 2012-></option>
+<option value="BMW 330i 2.0 2015->">BMW 330i 2.0 2015-></option>
+<option value="BMW 328i GT 2.0">BMW 328i GT 2.0</option>
+<option value="BMW 116i 1.6">BMW 116i 1.6</option>
+<option value="BMW X3 2,5">BMW X3 2,5</option>
+<option value="BMW X3 3,0">BMW X3 3,0</option>
+<option value="BMW X5 3,0 TDI">BMW X5 3,0 TDI</option>
+<option value="BMW X5 3,0 SI">BMW X5 3,0 SI</option>
+<option value="BMW X6 3,0">BMW X6 3,0</option>
+<option value="CHERY QQ 1.0">CHERY QQ 1.0</option>
+<option value="CHERY QQ 1.1">CHERY QQ 1.1</option>
+<option value="CHERY TIGGO 2.0 2008 - 2012">CHERY TIGGO 2.0 2008 - 2012</option>
+<option value="CHERY TIGGO 1.6 2013 -">CHERY TIGGO 1.6 2013 -</option>
+<option value="CHERY TIGGO 5 2.0 2016 -">CHERY TIGGO 5 2.0 2016 -</option>
+<option value="CHERY TIGGO 4">CHERY TIGGO 4</option>
+<option value="CHRYSLER">CHRYSLER</option>
+<option value="CHEVROLET AGILE">CHEVROLET AGILE</option>
+<option value="CHEVROLET ASTRA">CHEVROLET ASTRA</option>
+<option value="CHEVROLET AVEO">CHEVROLET AVEO</option>
+<option value="CHEVROLET CELTA">CHEVROLET CELTA</option>
+<option value="CHEVROLET CHEVY">CHEVROLET CHEVY</option>
+<option value="CHEVROLET COBALT">CHEVROLET COBALT</option>
+<option value="CHEVROLET CORSA">CHEVROLET CORSA</option>
+<option value="CHEVROLET CORSA 2">CHEVROLET CORSA 2</option>
+<option value="CHEVROLET CRUZE 1.4">CHEVROLET CRUZE 1.4</option>
+<option value="CHEVROLET CRUZE 1.8">CHEVROLET CRUZE 1.8</option>
+<option value="CHEVROLET CRUZE 2.0 DIESEL">CHEVROLET CRUZE 2.0 DIESEL</option>
+<option value="CHEVROLET MERIVA">CHEVROLET MERIVA</option>
+<option value="CHEVROLET MONTANA">CHEVROLET MONTANA</option>
+<option value="CHEVROLET ONIX">CHEVROLET ONIX</option>
+<option value="CHEVROLET ONIX 1.0 NEW">CHEVROLET ONIX 1.0 NEW</option>
+<option value="CHEVROLET PRISMA">CHEVROLET PRISMA</option>
+<option value="CHEVROLET S10 MWM < 2008">CHEVROLET S10 MWM < 2008</option>
+<option value="CHEVROLET S10 MWM > 2008">CHEVROLET S10 MWM > 2008</option>
+<option value="CHEVROLET S10 NUEVA">CHEVROLET S10 NUEVA</option>
+<option value="CHEVROLET SONIC">CHEVROLET SONIC</option>
+<option value="CHEVROLET SPIN">CHEVROLET SPIN</option>
+<option value="CHEVROLET SPIN DIESEL">CHEVROLET SPIN DIESEL</option>
+<option value="CHEVROLET SPARK">CHEVROLET SPARK</option>
+<option value="CHEVROLET TRACKER 1.2">CHEVROLET TRACKER 1.2</option>
+<option value="CHEVROLET TRACKER 1.4">CHEVROLET TRACKER 1.4</option>
+<option value="CHEVROLET TRACKER 1.8">CHEVROLET TRACKER 1.8</option>
+<option value="CHEVROLET TRAILBLAZER (S10 NUEVA)">CHEVROLET TRAILBLAZER (S10 NUEVA)</option>
+<option value="CHEVROLET VECTRA">CHEVROLET VECTRA</option>
+<option value="CHEVROLET ZAFIRA">CHEVROLET ZAFIRA</option>
+<option value="CITROEN 3CV">CITROEN 3CV</option>
+<option value="CITROËN BERLINGO NAFTA">CITROËN BERLINGO NAFTA</option>
+<option value="CITROËN BERLINGO 1.6 HDI">CITROËN BERLINGO 1.6 HDI</option>
+<option value="CITROËN BERLINGO 1.9">CITROËN BERLINGO 1.9</option>
+<option value="CITROËN C3">CITROËN C3</option>
+<option value="CITROËN C3 AIRCROSS">CITROËN C3 AIRCROSS</option>
+<option value="CITROËN C3 1.4 DIESEL">CITROËN C3 1.4 DIESEL</option>
+<option value="CITROËN C-ELYSEE">CITROËN C-ELYSEE</option>
+<option value="COTROEN C-ELYSEE DIESEL">COTROEN C-ELYSEE DIESEL</option>
+<option value="CITROËN C4">CITROËN C4</option>
+<option value="CITROËN C4 2.0">CITROËN C4 2.0</option>
+<option value="CITROËN C4 1.6 HDI">CITROËN C4 1.6 HDI</option>
+<option value="CITROËN C4 1.6 THP">CITROËN C4 1.6 THP</option>
+<option value="CITROEN C5 2.0 HDI">CITROEN C5 2.0 HDI</option>
+<option value="CITROËN PICASSO">CITROËN PICASSO</option>
+<option value="CITROËN PICASSO X">CITROËN PICASSO X</option>
+<option value="CITROËN JUMMPY">CITROËN JUMMPY</option>
+<option value="DODGE RAM">DODGE RAM</option>
+<option value="DODGE JOURNEY">DODGE JOURNEY</option>
+<option value="FIAT 147">FIAT 147</option>
+<option value="FIAT 500 1.4 MULTIAIR">FIAT 500 1.4 MULTIAIR</option>
+<option value="FIAT 500 1.4 Evo 8V">FIAT 500 1.4 Evo 8V</option>
+<option value="FIAT 600">FIAT 600</option>
+<option value="FIAT DUNA">FIAT DUNA</option>
+<option value="FIAT ARGO 1.3">FIAT ARGO 1.3</option>
+<option value="FIAT ARGO 1.8">FIAT ARGO 1.8</option>
+<option value="FIAT CRONOS 1.3">FIAT CRONOS 1.3</option>
+<option value="FIAT CRONOS 1.8">FIAT CRONOS 1.8</option>
+<option value="FIAT DUCATO">FIAT DUCATO</option>
+<option value="FIAT DOBLO">FIAT DOBLO</option>
+<option value="FIAT FIORINO">FIAT FIORINO</option>
+<option value="FIAT FIORINO 2014">FIAT FIORINO 2014</option>
+<option value="FIAT IDEA 1.6">FIAT IDEA 1.6</option>
+<option value="FIAT IDEA 1.8">FIAT IDEA 1.8</option>
+<option value="FIAT MOBI 1.4">FIAT MOBI 1.4</option>
+<option value="FIAT LINEA 1.6">FIAT LINEA 1.6</option>
+<option value="FIAT PALIO">FIAT PALIO</option>
+<option value="FIAT PALIO 2">FIAT PALIO 2</option>
+<option value="FIAT PUNTO 1.4">FIAT PUNTO 1.4</option>
+<option value="FIAT PUNTO 1.6">FIAT PUNTO 1.6</option>
+<option value="FIAT PUNTO 1.8">FIAT PUNTO 1.8</option>
+<option value="FIAT QUBO">FIAT QUBO</option>
+<option value="FIAT SIENA 1.4">FIAT SIENA 1.4</option>
+<option value="FIAT SIENA 1.6">FIAT SIENA 1.6</option>
+<option value="FIAT SIENA GRAN">FIAT SIENA GRAN</option>
+<option value="FIAT STRADA 1.7D">FIAT STRADA 1.7D</option>
+<option value="FIAT STRADA 1.4">FIAT STRADA 1.4</option>
+<option value="FIAT STRADA 1.6">FIAT STRADA 1.6</option>
+<option value="FIAT TORO">FIAT TORO</option>
+<option value="FIAT TORO NAFTA">FIAT TORO NAFTA</option>
+<option value="FIAT UNO">FIAT UNO</option>
+<option value="FIAT UNO FIRE">FIAT UNO FIRE</option>
+<option value="FIAT UNO NOVO">FIAT UNO NOVO</option>
+<option value="FORD CARGO 17-310">FORD CARGO 17-310</option>
+<option value="FORD CARGO">FORD CARGO</option>
+<option value="FORD CARGO 1722">FORD CARGO 1722</option>
+<option value="FORD ECOSPORT">FORD ECOSPORT</option>
+<option value="FORD ECOSPORT 1.6">FORD ECOSPORT 1.6</option>
+<option value="FORD ECOSPORT 1.4 DIESEL">FORD ECOSPORT 1.4 DIESEL</option>
+<option value="FORD ESCORT">FORD ESCORT</option>
+<option value="FORD F-100 3.9">FORD F-100 3.9</option>
+<option value="FORD F4000">FORD F4000</option>
+<option value="FORD F4000 2016-">FORD F4000 2016-</option>
+<option value="FORD FIESTA 1.6">FORD FIESTA 1.6</option>
+<option value="FORD FIESTA KINETIC">FORD FIESTA KINETIC</option>
+<option value="FORD FIESTA 1.4 DIESEL">FORD FIESTA 1.4 DIESEL</option>
+<option value="FORD FOCUS">FORD FOCUS</option>
+<option value="FORD FOCUS 2">FORD FOCUS 2</option>
+<option value="FORD FOCUS 3">FORD FOCUS 3</option>
+<option value="FORD KA 1997">FORD KA 1997</option>
+<option value="FORD KA 1 < 2008">FORD KA 1 < 2008</option>
+<option value="FORD KA 2 2008-2011">FORD KA 2 2008-2011</option>
+<option value="FORD KA 3 >2011">FORD KA 3 >2011</option>
+<option value="FORD MAVERICK">FORD MAVERICK</option>
+<option value="FORD MONDEO">FORD MONDEO</option>
+<option value="FORD MONDEO 2.2 (2006->)">FORD MONDEO 2.2 (2006->)</option>
+<option value="FORD RANGER 3.0">FORD RANGER 3.0</option>
+<option value="FORD RANGER NUEVA">FORD RANGER NUEVA</option>
+<option value="FORD RANGER NUEVA 2022">FORD RANGER NUEVA 2022</option>
+<option value="FORD TERRITORY 1.5">FORD TERRITORY 1.5</option>
+<option value="FORD TERRITORY 1.8">FORD TERRITORY 1.8</option>
+<option value="FORD TRANSIT">FORD TRANSIT</option>
+<option value="HONDA ACCORD">HONDA ACCORD</option>
+<option value="HONDA CIVIC 1.8 2006 - 2012">HONDA CIVIC 1.8 2006 - 2012</option>
+<option value="HONDA CIVIC 2.0 2016">HONDA CIVIC 2.0 2016</option>
+<option value="HONDA CRV 2.4 2012->">HONDA CRV 2.4 2012-></option>
+<option value="HONDA FIT">HONDA FIT</option>
+<option value="HONDA CITY">HONDA CITY</option>
+<option value="HONDA HRV 1.8 > 2015">HONDA HRV 1.8 > 2015</option>
+<option value="HYUNDAI ATOS 98->">HYUNDAI ATOS 98-></option>
+<option value="HYUNDAI ATOS 2000->">HYUNDAI ATOS 2000-></option>
+<option value="HYUNDAI ATOS 2006->">HYUNDAI ATOS 2006-></option>
+<option value="HYUNDAI TUCSON">HYUNDAI TUCSON</option>
+<option value="HYUNDAI H-1">HYUNDAI H-1</option>
+<option value="HYUNDAI i10">HYUNDAI i10</option>
+<option value="HYUNDAI i20">HYUNDAI i20</option>
+<option value="HYUNDAI i30">HYUNDAI i30</option>
+<option value="IVECO DAILY 70.170">IVECO DAILY 70.170</option>
+<option value="IVECO DAILY 35.150">IVECO DAILY 35.150</option>
+<option value="IVECO DAILY 35.10">IVECO DAILY 35.10</option>
+<option value="IVECO TECTOR">IVECO TECTOR</option>
+<option value="IVECO TECTOR 170E25">IVECO TECTOR 170E25</option>
+<option value="IVECO TECTOR 260E230">IVECO TECTOR 260E230</option>
+<option value="JEEP COMPASS 2.4">JEEP COMPASS 2.4</option>
+<option value="JEEP COMPASS 2.4 (2022->)">JEEP COMPASS 2.4 (2022->)</option>
+<option value="JEEP COMPASS 2.0 (2022)">JEEP COMPASS 2.0 (2022)</option>
+<option value="JEEP RENEGADE 1.8">JEEP RENEGADE 1.8</option>
+<option value="JMC N900">JMC N900</option>
+<option value="KIA CARNIVAL">KIA CARNIVAL</option>
+<option value="KIA K2500 2006-2013">KIA K2500 2006-2013</option>
+<option value="KIA K2500 2014">KIA K2500 2014</option>
+<option value="KIA PICANTO 1.2 2012">KIA PICANTO 1.2 2012</option>
+<option value="KIA PICANTO 1.1 2006">KIA PICANTO 1.1 2006</option>
+<option value="KIA PICANTO 1.0 2011">KIA PICANTO 1.0 2011</option>
+<option value="KIA SORENTO 2.0 CRDI">KIA SORENTO 2.0 CRDI</option>
+<option value="LIFAN MYWAY">LIFAN MYWAY</option>
+<option value="MERCEDES-BENZ ACCELO 1016">MERCEDES-BENZ ACCELO 1016</option>
+<option value="MERCEDES-BENZ ACCELO">MERCEDES-BENZ ACCELO</option>
+<option value="MERCEDES-BENZ CLASE A">MERCEDES-BENZ CLASE A</option>
+<option value="MERCEDES-BENZ C230">MERCEDES-BENZ C230</option>
+<option value="MERCEDES-BENZ CLASE B 1.3">MERCEDES-BENZ CLASE B 1.3</option>
+<option value="MERCEDES-BENZ CLASE B 1.7">MERCEDES-BENZ CLASE B 1.7</option>
+<option value="MERCEDES-BENZ CLASE B 2.0 8V">MERCEDES-BENZ CLASE B 2.0 8V</option>
+<option value="MERCEDEZ-BENZ CLASE B 2.0 16V">MERCEDEZ-BENZ CLASE B 2.0 16V</option>
+<option value="MERCEDES-BENZ GLK300">MERCEDES-BENZ GLK300</option>
+<option value="MERCEDES-BENZ LS1634">MERCEDES-BENZ LS1634</option>
+<option value="MERCEDES-BENZ SPRINTER 416">MERCEDES-BENZ SPRINTER 416</option>
+<option value="MERCEDES-BENZ SPRINTER 415/515">MERCEDES-BENZ SPRINTER 415/515</option>
+<option value="MERCEDES-BENZ SPRINTER 313/413">MERCEDES-BENZ SPRINTER 313/413</option>
+<option value="MERCEDES-BENZ C200 1.8">MERCEDES-BENZ C200 1.8</option>
+<option value="MITSUBISHI L200 3.2 TRITON">MITSUBISHI L200 3.2 TRITON</option>
+<option value="NISSAN FRONTIER JAPONESA">NISSAN FRONTIER JAPONESA</option>
+<option value="NISSAN FRONTIER 2.8 MWM">NISSAN FRONTIER 2.8 MWM</option>
+<option value="NISSAN FRONTIER">NISSAN FRONTIER</option>
+<option value="NISSAN FRONTIER NEW 2">NISSAN FRONTIER NEW 2</option>
+<option value="NISSAN KICKS">NISSAN KICKS</option>
+<option value="NISSAN NOTE">NISSAN NOTE</option>
+<option value="NISSAN MARCH">NISSAN MARCH</option>
+<option value="NISSAN SENTRA">NISSAN SENTRA</option>
+<option value="NISSAN TIIDA">NISSAN TIIDA</option>
+<option value="NISSAN VERSA">NISSAN VERSA</option>
+<option value="PEUGEOT 105">PEUGEOT 105</option>
+<option value="PEUGEOT 2008 1.6 THP">PEUGEOT 2008 1.6 THP</option>
+<option value="PEUGEOT 2008">PEUGEOT 2008</option>
+<option value="PEUGEOT 206 2.0 HDI">PEUGEOT 206 2.0 HDI</option>
+<option value="PEUGEOT 206">PEUGEOT 206</option>
+<option value="PEUGEOT 207 1.4">PEUGEOT 207 1.4</option>
+<option value="PEUGEOT 207 1.6">PEUGEOT 207 1.6</option>
+<option value="PEUGEOT 207 1.4 DIESEL">PEUGEOT 207 1.4 DIESEL</option>
+<option value="PEUGEOT 207 2.0 HDI">PEUGEOT 207 2.0 HDI</option>
+<option value="PEUGEOT 208 1.2">PEUGEOT 208 1.2</option>
+<option value="PEUGEOT 208 1.5">PEUGEOT 208 1.5</option>
+<option value="PEUGEOT 208 1.6">PEUGEOT 208 1.6</option>
+<option value="PEUGEOT 3008">PEUGEOT 3008</option>
+<option value="PEUGEOT 301">PEUGEOT 301</option>
+<option value="PEUGEOT 301 DIESEL">PEUGEOT 301 DIESEL</option>
+<option value="PEUGEOT 306">PEUGEOT 306</option>
+<option value="PEUGEOT 307 1.6">PEUGEOT 307 1.6</option>
+<option value="PEUGEOT 307 2.0">PEUGEOT 307 2.0</option>
+<option value="PEUGEOT 307 2.0 HDI">PEUGEOT 307 2.0 HDI</option>
+<option value="PEUGEOT 308 1.6">PEUGEOT 308 1.6</option>
+<option value="PEUGEOT 308 2.0">PEUGEOT 308 2.0</option>
+<option value="PEUGEOT 308 1.6 HDI">PEUGEOT 308 1.6 HDI</option>
+<option value="PEUGEOT 308 1.6 THP">PEUGEOT 308 1.6 THP</option>
+<option value="PEUGEOT 406">PEUGEOT 406</option>
+<option value="PEUGEOT 408 2.0">PEUGEOT 408 2.0</option>
+<option value="PEUGEOT 408 1.6 HDI">PEUGEOT 408 1.6 HDI</option>
+<option value="PEUGEOT 408 1.6 THP">PEUGEOT 408 1.6 THP</option>
+<option value="PEUGEOT 504">PEUGEOT 504</option>
+<option value="PEUGEOT 505">PEUGEOT 505</option>
+<option value="PEUGEOT 5008">PEUGEOT 5008</option>
+<option value="PEUGEOT PARTNER NAFTA">PEUGEOT PARTNER NAFTA</option>
+<option value="PEUGEOT PARTNER 1.6 HDI">PEUGEOT PARTNER 1.6 HDI</option>
+<option value="PEUGEOT PARTNER 1.9">PEUGEOT PARTNER 1.9</option>
+<option value="RENAULT 12">RENAULT 12</option>
+<option value="RENAULT ALASKAN">RENAULT ALASKAN</option>
+<option value="RENAULT CLIO 1996">RENAULT CLIO 1996</option>
+<option value="RENAULT CLIO 1.6">RENAULT CLIO 1.6</option>
+<option value="RENAULT CLIO MIO 1.2">RENAULT CLIO MIO 1.2</option>
+<option value="RENAULT CAPTUR 1.6">RENAULT CAPTUR 1.6</option>
+<option value="RENAULT DUSTER 1.6 16V">RENAULT DUSTER 1.6 16V</option>
+<option value="RENAULT FLUENCE">RENAULT FLUENCE</option>
+<option value="RENAULT KANGOO 1.9">RENAULT KANGOO 1.9</option>
+<option value="RENAULT KANGOO 1.6">RENAULT KANGOO 1.6</option>
+<option value="RENAULT KANGOO NEW">RENAULT KANGOO NEW</option>
+<option value="RENAULT KOLEOS 2.5">RENAULT KOLEOS 2.5</option>
+<option value="RENAULT KWID">RENAULT KWID</option>
+<option value="RENAULT LOGAN 2008">RENAULT LOGAN 2008</option>
+<option value="RENAULT LAGUNA 16V">RENAULT LAGUNA 16V</option>
+<option value="RENAULT LOGAN 8V 2013">RENAULT LOGAN 8V 2013</option>
+<option value="RENAULT LOGAN 16V">RENAULT LOGAN 16V</option>
+<option value="RENAULT LOGAN NEW 2017">RENAULT LOGAN NEW 2017</option>
+<option value="RENAULT MASTER 1 (2005-2010)">RENAULT MASTER 1 (2005-2010)</option>
+<option value="RENAULT MASTER 2(2009-2013)">RENAULT MASTER 2(2009-2013)</option>
+<option value="RENAULT MASTER 3(2013->)">RENAULT MASTER 3(2013->)</option>
+<option value="RENAULT MEGANE 1.6">RENAULT MEGANE 1.6</option>
+<option value="RENAULT MEGANE 1.9 (200->)">RENAULT MEGANE 1.9 (200->)</option>
+<option value="RENAULT MEGANE 2">RENAULT MEGANE 2</option>
+<option value="RENAULT OROCH">RENAULT OROCH</option>
+<option value="RENAULT OROCH 2.0">RENAULT OROCH 2.0</option>
+<option value="RENAULT SANDERO 1.6 16V">RENAULT SANDERO 1.6 16V</option>
+<option value="RENAULT SANDERO 2017">RENAULT SANDERO 2017</option>
+<option value="RENAULT SANDERO 2015">RENAULT SANDERO 2015</option>
+<option value="RENAULT SCENIC">RENAULT SCENIC</option>
+<option value="RENAULT SYMBOL 1.6 16V">RENAULT SYMBOL 1.6 16V</option>
+<option value="RENAULT TWINGO">RENAULT TWINGO</option>
+<option value="RENAULT CAMION">RENAULT CAMION</option>
+<option value="ROVER | LAND ROVER 400">ROVER | LAND ROVER 400</option>
+<option value="SEAT IBIZA 1.4 2010">SEAT IBIZA 1.4 2010</option>
+<option value="SEAT IBIZA 1.6 2010">SEAT IBIZA 1.6 2010</option>
+<option value="SHINERAY">SHINERAY</option>
+<option value="SUZUKI FUN">SUZUKI FUN</option>
+<option value="SUZUKI GRAND VITARA">SUZUKI GRAND VITARA</option>
+<option value="TOYOTA CARINA">TOYOTA CARINA</option>
+<option value="TOYOTA COROLLA">TOYOTA COROLLA</option>
+<option value="TOYOTA COROLLA DIESEL">TOYOTA COROLLA DIESEL</option>
+<option value="TOYOTA COROLLA 2010 - 2021">TOYOTA COROLLA 2010 - 2021</option>
+<option value="TOYOTA COROLLA > 2021">TOYOTA COROLLA > 2021</option>
+<option value="TOYOTA ETIOS">TOYOTA ETIOS</option>
+<option value="TOYOTA HILUX 2.8">TOYOTA HILUX 2.8</option>
+<option value="TOYOTA HILUX 2005-2016">TOYOTA HILUX 2005-2016</option>
+<option value="TOYOTA HILUX > 2016">TOYOTA HILUX > 2016</option>
+<option value="TOYOTA SW4 2005-2016">TOYOTA SW4 2005-2016</option>
+<option value="TOYOTA SW4 >2016">TOYOTA SW4 >2016</option>
+<option value="TOYOTA RAV-4">TOYOTA RAV-4</option>
+<option value="TOYOTA VITZ">TOYOTA VITZ</option>
+<option value="TOYOTA YARIS">TOYOTA YARIS</option>
+<option value="VOLKSWAGEN AMAROK 2010 - 2015">VOLKSWAGEN AMAROK 2010 - 2015</option>
+<option value="VOLKSWAGEN AMAROK 2015 -">VOLKSWAGEN AMAROK 2015 -</option>
+<option value="VOLKSWAGEN AMAROK V6">VOLKSWAGEN AMAROK V6</option>
+<option value="VOLKSWAGEN BORA">VOLKSWAGEN BORA</option>
+<option value="VOLKSWAGEN BORA DIESEL">VOLKSWAGEN BORA DIESEL</option>
+<option value="VOLKSWAGEN FOX">VOLKSWAGEN FOX</option>
+<option value="VOLKSWAGEN GOL">VOLKSWAGEN GOL</option>
+<option value="VOLKSWAGEN GOL DIESEL">VOLKSWAGEN GOL DIESEL</option>
+<option value="VOLKSWAGEN GOL COUNTRY">VOLKSWAGEN GOL COUNTRY</option>
+<option value="VOLKSWAGEN GOL COUNTRY DIESEL">VOLKSWAGEN GOL COUNTRY DIESEL</option>
+<option value="VOLKSWAGEN GOL TREND">VOLKSWAGEN GOL TREND</option>
+<option value="VOLKSWAGEN GOLF 2.0">VOLKSWAGEN GOLF 2.0</option>
+<option value="VOLKSWAGEN GOLF">VOLKSWAGEN GOLF</option>
+<option value="VOLKSWAGEN GOLF 1.4 TFSI">VOLKSWAGEN GOLF 1.4 TFSI</option>
+<option value="VOLKSWAGEN GOLF 1.8">VOLKSWAGEN GOLF 1.8</option>
+<option value="VOLKSWAGEN GOLF 1.6">VOLKSWAGEN GOLF 1.6</option>
+<option value="VOLKSWAGEN NIVUS 1.0 TSI">VOLKSWAGEN NIVUS 1.0 TSI</option>
+<option value="VOLKSWAGEN PASSAT V6 TFSI">VOLKSWAGEN PASSAT V6 TFSI</option>
+<option value="VOLKSWAGEN PASSAT 3.2">VOLKSWAGEN PASSAT 3.2</option>
+<option value="VOLKSWAGEN PASSAT 3.6">VOLKSWAGEN PASSAT 3.6</option>
+<option value="VOLKSWAGEN PASSAT 2.0 TDI (2005->)">VOLKSWAGEN PASSAT 2.0 TDI (2005->)</option>
+<option value="VOLKSWAGEN PASSAT 1.9">VOLKSWAGEN PASSAT 1.9</option>
+<option value="VOLKSWAGWEN PASSAT 2.0 (<-2005)">VOLKSWAGWEN PASSAT 2.0 (<-2005)</option>
+<option value="VOLKSWAGEN POLO">VOLKSWAGEN POLO</option>
+<option value="VOLKSWAGEN POLO 1.6 MSI 2018 -">VOLKSWAGEN POLO 1.6 MSI 2018 -</option>
+<option value="VOLKSWAGEN POLO 1.6 TSI">VOLKSWAGEN POLO 1.6 TSI</option>
+<option value="VOLKSWAGEN POLO DIESEL">VOLKSWAGEN POLO DIESEL</option>
+<option value="VOLKSWAGEN SAVEIRO 1996">VOLKSWAGEN SAVEIRO 1996</option>
+<option value="VOLKSWAGEN SAVEIRO">VOLKSWAGEN SAVEIRO</option>
+<option value="VOLKSWAGEN SAVEIRO DIESEL">VOLKSWAGEN SAVEIRO DIESEL</option>
+<option value="VOLKSWAGEN SAVEIRO MSI 2015">VOLKSWAGEN SAVEIRO MSI 2015</option>
+<option value="VOLKSWAGEN SENDA">VOLKSWAGEN SENDA</option>
+<option value="VOLKSWAGEN SHARAM">VOLKSWAGEN SHARAM</option>
+<option value="VOLKSWAGEN SCIROCCO 1.4 TFSI">VOLKSWAGEN SCIROCCO 1.4 TFSI</option>
+<option value="VOLKSWAGEN SURAN 1.6">VOLKSWAGEN SURAN 1.6</option>
+<option value="VOLKSWAGEN SURAN">VOLKSWAGEN SURAN</option>
+<option value="VOLKSWAGEN SURAN DIESEL 1.9">VOLKSWAGEN SURAN DIESEL 1.9</option>
+<option value="VOLKSWAGEN T-CROSS 1.0">VOLKSWAGEN T-CROSS 1.0</option>
+<option value="VOLKSWAGEN T-CROSS 1.4">VOLKSWAGEN T-CROSS 1.4</option>
+<option value="VOLKSWAFWN T-CROSS 1.6">VOLKSWAFWN T-CROSS 1.6</option>
+<option value="VOLKSWAGEN TIGUAN 2,0 TSI (2009 ->)">VOLKSWAGEN TIGUAN 2,0 TSI (2009 ->)</option>
+<option value="VOLKSWAGEN TIGUAN 1,4 TSI (2018->)">VOLKSWAGEN TIGUAN 1,4 TSI (2018->)</option>
+<option value="VOLKSWAGEN TIGUAN 2,0 TDI (2009 ->)">VOLKSWAGEN TIGUAN 2,0 TDI (2009 ->)</option>
+<option value="VOLKSWAGEN TIGUAN 2,0 TDI (20012 ->)">VOLKSWAGEN TIGUAN 2,0 TDI (20012 ->)</option>
+<option value="VOLKSWAGEN UP TSI">VOLKSWAGEN UP TSI</option>
+<option value="VOLKSWAGEN UP">VOLKSWAGEN UP</option>
+<option value="VOLKSWAGEN VENTO 1.9">VOLKSWAGEN VENTO 1.9</option>
+<option value="VOLKSWAGEN VENTO 2.0 TSI">VOLKSWAGEN VENTO 2.0 TSI</option>
+<option value="VOLKSWAGEN VENTO 2.0 TDI">VOLKSWAGEN VENTO 2.0 TDI</option>
+<option value="VOLKSWAGEN VENTO 1.4 TFSI">VOLKSWAGEN VENTO 1.4 TFSI</option>
+<option value="VOLKSWAGEN VENTO 2.5">VOLKSWAGEN VENTO 2.5</option>
+<option value="VOLKSWAGEN VOYAGE">VOLKSWAGEN VOYAGE</option>
+<option value="VOLKSWAGEN VIRTUS 1.4 TSI (2020->)">VOLKSWAGEN VIRTUS 1.4 TSI (2020->)</option>
+<option value="VOLKSWAGEN VIRTUS 1.0 TSI">VOLKSWAGEN VIRTUS 1.0 TSI</option>
+<option value="VOLKSWAGEN VIRTUS 1.6">VOLKSWAGEN VIRTUS 1.6</option>
+<option value="VOLKSWAGEN VIRTUS 1.0 MPI">VOLKSWAGEN VIRTUS 1.0 MPI</option>
+<option value="__otro__">Otro...</option>
+              </select>
+            </div>
+            <div id="snv-vehiculo-otro-wrap" style="display:none;margin-top:8px">
+              <input type="text" id="snv-vehiculo-otro" placeholder="Escribí el modelo..."
+                style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:14px;font-family:Montserrat,sans-serif"/>
+            </div>
+            <input type="hidden" id="snv-vehiculo"/>
+          </div>
+
+          <!-- 7. Revisión de fluidos -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">7. Revisión de fluidos (Liquido de Frenos, Refrigerante, Hidráulico)</label>
+            <div style="margin-top:8px">
+              <label style="display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;font-size:14px">
+                <input type="checkbox" id="snv-fluidos-cb" style="width:16px;height:16px;accent-color:var(--gold)" checked> Revisados
+              </label>
+            </div>
+          </div>
+
+          <!-- 8. Observaciones de fluidos -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">8. Observaciones de la revisión de fluidos</label>
+            <input type="text" id="snv-obs-fluidos" style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:14px;font-family:Montserrat,sans-serif;margin-top:6px;background:#fff"/>
+          </div>
+
+          <!-- 9. Aceite Motor -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">9. Aceite Motor</label>
+            <div style="margin-top:6px;border:1px solid var(--gray-mid);border-radius:4px;overflow:hidden">
+              <select id="snv-aceite-sel" style="width:100%;padding:10px 12px;border:none;font-size:14px;font-family:Montserrat,sans-serif;background:#fff" onchange="srv_onAceiteSel(this.value)">
+<option value="">— Seleccionar —</option>
+<option value="ACDELCO 5W30">ACDELCO 5W30</option>
+<option value="AC DELCO DEXOS 1 5w-30">AC DELCO DEXOS 1 5w-30</option>
+<option value="AC DELCO DEXOS GEN 3 0w-20">AC DELCO DEXOS GEN 3 0w-20</option>
+<option value="CASTROL 20/50">CASTROL 20/50</option>
+<option value="CASTROL EDGE 5/30">CASTROL EDGE 5/30</option>
+<option value="CASTROL EDGE 5/40">CASTROL EDGE 5/40</option>
+<option value="CASTROL MAGNATEC 5/30">CASTROL MAGNATEC 5/30</option>
+<option value="CASTROL 10/30">CASTROL 10/30</option>
+<option value="CASTROL 10/40">CASTROL 10/40</option>
+<option value="ELAION AURO D1 5/30">ELAION AURO D1 5/30</option>
+<option value="ELAION AURO D1 0/20">ELAION AURO D1 0/20</option>
+<option value="ELAION AURO D2 5/30">ELAION AURO D2 5/30</option>
+<option value="ELAION AURO FE 5/30">ELAION AURO FE 5/30</option>
+<option value="ELAION AURO PLUS 5/40">ELAION AURO PLUS 5/40</option>
+<option value="ELAION F10 15/40">ELAION F10 15/40</option>
+<option value="ELAION F10 20/50">ELAION F10 20/50</option>
+<option value="ELAION F30 10/40">ELAION F30 10/40</option>
+<option value="ELAION F50 5/40">ELAION F50 5/40</option>
+<option value="ELF 700 10/40">ELF 700 10/40</option>
+<option value="GULF 0W20">GULF 0W20</option>
+<option value="MOBIL 2000 10/40">MOBIL 2000 10/40</option>
+<option value="MOBIL 3000 5/30">MOBIL 3000 5/30</option>
+<option value="MOBIL DELVAC 15/40">MOBIL DELVAC 15/40</option>
+<option value="MOBIL XHP 10/40">MOBIL XHP 10/40</option>
+<option value="MOBIL 20/50">MOBIL 20/50</option>
+<option value="MOTUL 8100 5/40">MOTUL 8100 5/40</option>
+<option value="MOTUL 8100 5/30">MOTUL 8100 5/30</option>
+<option value="MOTUL SPECIFIC 5/40">MOTUL SPECIFIC 5/40</option>
+<option value="MOTUL 4100 10/40">MOTUL 4100 10/40</option>
+<option value="MOTUL 6100 10/40">MOTUL 6100 10/40</option>
+<option value="LIQUI MOLY PERFORMANCE 5/30">LIQUI MOLY PERFORMANCE 5/30</option>
+<option value="LIQUI MOLY PERFORMANCE 5/40">LIQUI MOLY PERFORMANCE 5/40</option>
+<option value="LIQUI MOLY GEN 0/20">LIQUI MOLY GEN 0/20</option>
+<option value="SELENIA 0W20">SELENIA 0W20</option>
+<option value="SELENIA 20K 15/40">SELENIA 20K 15/40</option>
+<option value="SELENIA 20K TURBO DIESEL">SELENIA 20K TURBO DIESEL</option>
+<option value="SELENIA 5W30">SELENIA 5W30</option>
+<option value="SELENIA WR 5/30">SELENIA WR 5/30</option>
+<option value="SHELL HX8 5/40">SHELL HX8 5/40</option>
+<option value="SHELL RIMULA R4 15/40">SHELL RIMULA R4 15/40</option>
+<option value="SHELL ULTRA 5/30">SHELL ULTRA 5/30</option>
+<option value="SHELL HELIX ULTRA 0W30">SHELL HELIX ULTRA 0W30</option>
+<option value="SHELL ULTRA 5/40">SHELL ULTRA 5/40</option>
+<option value="SHELL HX3 20/50">SHELL HX3 20/50</option>
+<option value="SHELL HX7 10/40">SHELL HX7 10/40</option>
+<option value="SHELL HX5 15/40">SHELL HX5 15/40</option>
+<option value="SHELL RIMULA RS 10/40">SHELL RIMULA RS 10/40</option>
+<option value="TOTAL QUARTZ INEO FIRST 0W30">TOTAL QUARTZ INEO FIRST 0W30</option>
+<option value="TOTAL 5000 15/40">TOTAL 5000 15/40</option>
+<option value="TOTAL 7000 10/40">TOTAL 7000 10/40</option>
+<option value="TOTAL 9000 5/40">TOTAL 9000 5/40</option>
+<option value="TOTAL 9000 0W20">TOTAL 9000 0W20</option>
+<option value="TOTAL INEO 5W30">TOTAL INEO 5W30</option>
+<option value="VALVOLINE 5/20">VALVOLINE 5/20</option>
+<option value="VALVOLINE 5/40">VALVOLINE 5/40</option>
+<option value="VALVOLINE 10/40">VALVOLINE 10/40</option>
+<option value="VALVOLINE 15/40">VALVOLINE 15/40</option>
+<option value="VALVOLINE 5/30">VALVOLINE 5/30</option>
+<option value="YPF EXTRAVIDA XV100 15/40">YPF EXTRAVIDA XV100 15/40</option>
+<option value="YPF 20/50">YPF 20/50</option>
+<option value="YPF EXTRAVIDA XV300 15/40">YPF EXTRAVIDA XV300 15/40</option>
+<option value="__otro__">Otro...</option>
+              </select>
+            </div>
+            <div id="snv-aceite-otro-wrap" style="display:none;margin-top:8px">
+              <input type="text" id="snv-aceite-otro" placeholder="Especificá el aceite..."
+                style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:14px;font-family:Montserrat,sans-serif"/>
+            </div>
+            <input type="hidden" id="snv-aceite"/>
+          </div>
+
+          <!-- 10. Tipo de Aceite (ENVASADO / A GRANEL) -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">10. Tipo de Aceite</label>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-envasado" value="ENVASADO" style="width:16px;height:16px;accent-color:var(--gold)"> ENVASADO</label>
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-envasado" value="A GRANEL" style="width:16px;height:16px;accent-color:var(--gold)"> A GRANEL</label>
+            </div>
+          </div>
+
+          <!-- 11. Tipo de Aceite (Mineral / Semi Sintético / Sintético) -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">11. Tipo de Aceite</label>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-tipo-aceite" value="Mineral" style="width:16px;height:16px;accent-color:var(--gold)"> Mineral</label>
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-tipo-aceite" value="Semi Sintético" style="width:16px;height:16px;accent-color:var(--gold)"> Semi Sintético</label>
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-tipo-aceite" value="Sintético" style="width:16px;height:16px;accent-color:var(--gold)"> Sintético</label>
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-tipo-aceite" value="__otro__" style="width:16px;height:16px;accent-color:var(--gold)" onchange="document.getElementById('snv-tipo-aceite-otro').style.display=this.checked?'block':'none'"> Otro: <input type="text" id="snv-tipo-aceite-otro" placeholder="" style="display:none;padding:4px 8px;border:none;border-bottom:1px solid #999;font-size:14px;font-family:Montserrat,sans-serif;width:150px"/></label>
+            </div>
+          </div>
+
+          <!-- 12-15. Filtros SI/NO -->
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">12. Filtro de Aceite</label>
+            <div style="margin-top:8px;display:flex;gap:24px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-aceite" value="SI" style="accent-color:var(--gold)"> SI</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-aceite" value="NO" style="accent-color:var(--gold)"> NO</label>
+            </div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">13. Filtro de Aire</label>
+            <div style="margin-top:8px;display:flex;gap:24px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-aire" value="SI" style="accent-color:var(--gold)"> SI</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-aire" value="NO" style="accent-color:var(--gold)"> NO</label>
+            </div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">14. Filtro de Combustible</label>
+            <div style="margin-top:8px;display:flex;gap:24px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-comb" value="SI" style="accent-color:var(--gold)"> SI</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-comb" value="NO" style="accent-color:var(--gold)"> NO</label>
+            </div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">15. Filtro de Habitáculo</label>
+            <div style="margin-top:8px;display:flex;gap:24px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-hab" value="SI" style="accent-color:var(--gold)"> SI</label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="radio" name="snv-f-hab" value="NO" style="accent-color:var(--gold)"> NO</label>
+            </div>
+          </div>
+
+          <!-- 16. Caja | Diferencial -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">16. Caja | Diferencial</label>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-caja" value="Revisado" style="width:16px;height:16px;accent-color:var(--gold)"> Revisado</label>
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px"><input type="radio" name="snv-caja" value="__otro__" style="width:16px;height:16px;accent-color:var(--gold)" onchange="document.getElementById('snv-caja-otro').style.display=this.checked?'inline-block':'none'"> Otro: <input type="text" id="snv-caja-otro" placeholder="" style="display:none;padding:4px 8px;border:none;border-bottom:1px solid #999;font-size:14px;font-family:Montserrat,sans-serif;width:200px"/></label>
+            </div>
+          </div>
+
+          <!-- 17. Aditivos -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">17. Aditivos</label>
+            <input type="text" id="snv-aditivos" style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:14px;font-family:Montserrat,sans-serif;margin-top:6px;background:#fff"/>
+          </div>
+
+          <!-- 18. Otros (Observaciones) -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">18. Otros (Observaciones)</label>
+            <input type="text" id="snv-otros" style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:14px;font-family:Montserrat,sans-serif;margin-top:6px;background:#fff"/>
+          </div>
+
+          <!-- 19. Escobillas -->
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">19. Escobillas</label>
+            <div style="margin-top:8px">
+              <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer;font-size:14px"><input type="checkbox" id="snv-esc-cb" style="width:16px;height:16px;accent-color:var(--gold)"> Cambio de escobillas</label>
+            </div>
+          </div>
+
+          <!-- 20. Lámparas -->
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">20. Lámparas</label>
+            <div style="margin-top:8px">
+              <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer;font-size:14px"><input type="checkbox" id="snv-lamp-cb" style="width:16px;height:16px;accent-color:var(--gold)"> Cambio de lamparas</label>
+            </div>
+          </div>
+
+          <!-- 21. Email -->
+          <div class="fg" style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700;color:var(--black)">21. Correo Electrónico</label>
+            <input type="email" id="snv-email" style="width:100%;padding:10px 12px;border:1px solid var(--gray-mid);border-bottom:2px solid #1a73e8;border-radius:0;font-size:14px;font-family:Montserrat,sans-serif;margin-top:6px;background:#fff"/>
+          </div>
+
+          <!-- Fecha (interna, no visible en form original) -->
+          <input type="hidden" id="snv-fecha"/>
+
+          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-mid)">
+            <button class="btn-p" onclick="srv_guardar()" style="padding:12px 32px;font-size:14px">Enviar service</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESTADÍSTICAS -->
+      <div id="srv-stats-p" class="panel">
+        <div class="section">
+          <div class="sec-title">Estadísticas</div>
+          <div id="srv-stats-content"><div class="empty">Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- IMPORTAR EXCEL -->
+      <div id="srv-import-p" class="panel">
+        <div class="section">
+          <div class="sec-title">Importar desde Excel</div>
+          <div style="padding:14px;background:#e8f0fe;border-radius:4px;border-left:4px solid #1a73e8;margin-bottom:14px;font-size:13px;color:#1557b0">
+            📋 Importá el archivo <strong>Proyecto_Service.xlsx</strong> (el mismo que usabas en Google Sheets). El sistema detecta automáticamente las columnas. Los services existentes no se duplican.
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn-p" style="background:#1e8e3e" onclick="document.getElementById('srv-import-file').click()">⬆ Seleccionar Excel</button>
+            <input type="file" id="srv-import-file" accept=".xlsx" style="display:none" onchange="srv_importarExcel(this)"/>
+            <span style="font-size:12px;color:#888">Compatible con el formato de Google Forms / Google Sheets</span>
+          </div>
+          <div id="srv-import-progress" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+    </div>`;
+
+  cont_dlUpdate();
+  document.getElementById('snv-fecha').value=hoy();
+  setTimeout(()=>{const ix=srvGetItems(),mx=ix.length?Math.max(...ix.map(s=>s.codigo||0)):0;const ce=document.getElementById('snv-codigo');if(ce)ce.value=mx+1;},100);
+  srv_renderBuscar();
+}
+
+window.srvSetFiltro = function(tipo, btn) {
+  srvFiltroTipo = tipo;
+  document.querySelectorAll('#srv-buscar-p .fb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const input = document.getElementById('srv-search-input');
+  if(input) {
+    const ph = {todos:'Buscá por cualquier campo...', patente:'Ingresá la patente (ej: ABC123)', cliente:'Nombre del cliente o empresa', modelo:'Marca y modelo (ej: Toyota Corolla)'};
+    input.placeholder = ph[tipo]||'Buscar...';
+    input.value = '';
+    srv_renderBuscar();
+  }
+};
+
+window.srv_search = function(val) {
+  srvBuscar = val.trim().toUpperCase();
+  srvPagina = 0;
+  srv_renderBuscar();
+};
+
+function srv_renderBuscar() {
+  const el = document.getElementById('srv-resultados'); if(!el) return;
+  const q = srvBuscar;
+  if(!q) {
+    // Sin búsqueda: mostrar los últimos 30
+    const ultimos = srvGetItems().slice().sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,30);
+    if(!ultimos.length){ el.innerHTML='<div class="empty">Sin services cargados. Usá "Importar Excel" para cargar el historial.</div>'; return; }
+    el.innerHTML = '<div style="font-size:12px;color:#888;margin-bottom:10px">Últimos '+ultimos.length+' services — buscá para filtrar</div>' + ultimos.map(srvCardHtml).join('');
+    return;
+  }
+  const items = srvGetItems();
+  let resultados;
+  if(srvFiltroTipo==='patente') {
+    resultados = items.filter(s=>s.patente===q||s.patente.includes(q));
+  } else if(srvFiltroTipo==='cliente') {
+    resultados = items.filter(s=>(s.cliente||'').toUpperCase().includes(q));
+  } else if(srvFiltroTipo==='modelo') {
+    resultados = items.filter(s=>((s.vehiculo||'')+' '+(s.modelo||'')).toUpperCase().includes(q));
+  } else {
+    resultados = items.filter(s=>
+      s.patente.includes(q)||
+      (s.cliente||'').toUpperCase().includes(q)||
+      ((s.vehiculo||'')+' '+(s.modelo||'')).toUpperCase().includes(q)
+    );
+  }
+  resultados.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const total = resultados.length;
+  const page = resultados.slice(srvPagina*SRV_POR_PAG, (srvPagina+1)*SRV_POR_PAG);
+
+  if(!total){ el.innerHTML='<div class="empty">Sin resultados para "'+q+'".</div>'; return; }
+
+  // Si es búsqueda exacta por patente, mostrar botón "Ver ficha completa"
+  const exactaPatente = resultados.filter(s=>s.patente===q);
+  let headerHtml = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:12px;color:#888">${total.toLocaleString('es-AR')} resultado${total!==1?'s':''}</span>
+    ${exactaPatente.length ? `<button class="btn-p" onclick="srv_verHistorial('${q}')" style="font-size:12px;padding:6px 14px">📋 Ver historial completo — ${q}</button>` : ''}
+  </div>`;
+
+  let pagNav = '';
+  if(total > SRV_POR_PAG) {
+    const totalPag = Math.ceil(total/SRV_POR_PAG);
+    pagNav = `<div style="display:flex;gap:6px;align-items:center;margin-top:12px;flex-wrap:wrap">
+      ${srvPagina>0?`<button class="btn-s" onclick="srvPagina--;srv_renderBuscar()">← Anterior</button>`:''}
+      <span style="font-size:12px;color:#888">Pág ${srvPagina+1} de ${totalPag}</span>
+      ${srvPagina<totalPag-1?`<button class="btn-s" onclick="srvPagina++;srv_renderBuscar()">Siguiente →</button>`:''}
+    </div>`;
+  }
+
+  el.innerHTML = headerHtml + page.map(srvCardHtml).join('') + pagNav;
+}
+
+function srvCardHtml(s) {
+  const yn = v => {
+    const vl = (v||'').toUpperCase();
+    if(!v||vl==='NO'||vl==='0') return '<span class="srv-no">—</span>';
+    if(vl==='SI'||vl==='SÍ') return '<span class="srv-ok">✓</span>';
+    return `<span style="font-size:11px;font-weight:600;color:#555">${v}</span>`;
+  };
+  return `<div class="srv-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="srv-patente" style="font-size:16px">${s.patente}</span>
+          <span class="srv-vehiculo">${s.vehiculo||''} ${s.modelo||''}</span>
+        </div>
+        <div style="font-size:12px;color:#888;margin-top:2px">
+          ${s.fecha?fmtF(s.fecha):'—'} &nbsp;·&nbsp;
+          ${s.km?s.km.toLocaleString('es-AR')+' km':'—'}
+          ${s.cliente?' &nbsp;·&nbsp; 👤 '+s.cliente:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-s" onclick="srv_verFicha(${s.id})" style="font-size:11px;padding:4px 10px">🔍 Ficha</button>
+        <button class="btn-s" onclick="srv_verHistorial('${s.patente}')" style="font-size:11px;padding:4px 10px">📋 Historial</button>
+      </div>
+    </div>
+    <div class="srv-grid" style="margin-top:8px">
+      <div class="srv-campo"><span class="srv-label">Aceite</span><span class="srv-val">${s.aceite||'—'} ${s.tipoAceite?'('+s.tipoAceite+')':''}</span></div>
+      <div class="srv-campo"><span class="srv-label">F. Aceite</span><span class="srv-val">${yn(s.filtroAceite)}</span></div>
+      <div class="srv-campo"><span class="srv-label">F. Aire</span><span class="srv-val">${yn(s.filtroAire)}</span></div>
+      <div class="srv-campo"><span class="srv-label">F. Comb.</span><span class="srv-val">${yn(s.filtroComb)}</span></div>
+      <div class="srv-campo"><span class="srv-label">F. Hab.</span><span class="srv-val">${yn(s.filtroHab)}</span></div>
+      <div class="srv-campo"><span class="srv-label">Caja/Dif.</span><span class="srv-val">${yn(s.cajaDif)}</span></div>
+      ${s.escobillas&&s.escobillas.toUpperCase()!=='NO'?`<div class="srv-campo"><span class="srv-label">Escobillas</span><span class="srv-val srv-ok">${s.escobillas}</span></div>`:''}
+      ${s.lamparas&&s.lamparas.toUpperCase()!=='NO'?`<div class="srv-campo"><span class="srv-label">Lámparas</span><span class="srv-val srv-ok">${s.lamparas}</span></div>`:''}
+    </div>
+    ${s.otros?`<div style="font-size:12px;color:#888;margin-top:6px;font-style:italic">💬 ${s.otros}</div>`:''}
+  </div>`;
+}
+
+window.srv_verFicha = function(id) {
+  const s = srvGetItems().find(x=>x.id===id); if(!s) return;
+  document.getElementById('sfm-patente').textContent = s.patente;
+  document.getElementById('sfm-vehiculo').textContent = (s.vehiculo||'') + ' ' + (s.modelo||'');
+  const yn2 = v => {
+    const vl=(v||'').toUpperCase();
+    if(!v||vl==='NO') return '<span style="color:#ccc">No</span>';
+    if(vl==='SI'||vl==='SÍ') return '<span style="color:var(--green);font-weight:700">✓ Sí</span>';
+    return `<strong>${v}</strong>`;
+  };
+  document.getElementById('sfm-body').innerHTML = `
+    <div class="form-grid" style="margin-bottom:14px">
+      ${s.cliente?`<div class="srv-campo"><span class="srv-label">Cliente</span><span class="srv-val">👤 ${s.cliente}</span></div>`:''}
+      ${s.tel?`<div class="srv-campo"><span class="srv-label">Teléfono</span><span class="srv-val">📞 ${s.tel}</span></div>`:''}
+      ${s.email?`<div class="srv-campo"><span class="srv-label">Email</span><span class="srv-val">✉ ${s.email}</span></div>`:''}
+      <div class="srv-campo"><span class="srv-label">Fecha</span><span class="srv-val">📅 ${fmtF(s.fecha)}</span></div>
+      <div class="srv-campo"><span class="srv-label">KM</span><span class="srv-val">🔢 ${s.km?s.km.toLocaleString('es-AR')+' km':'—'}</span></div>
+    </div>
+    <div style="background:var(--gray-light);border-radius:4px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:10px">Insumos y trabajos</div>
+      <div class="srv-grid">
+        <div class="srv-campo"><span class="srv-label">Aceite motor</span><span class="srv-val">${s.aceite||'—'}</span></div>
+        <div class="srv-campo"><span class="srv-label">Tipo</span><span class="srv-val">${s.tipoAceite||'—'}</span></div>
+        <div class="srv-campo"><span class="srv-label">Filtro aceite</span><span class="srv-val">${yn2(s.filtroAceite)}</span></div>
+        <div class="srv-campo"><span class="srv-label">Filtro aire</span><span class="srv-val">${yn2(s.filtroAire)}</span></div>
+        <div class="srv-campo"><span class="srv-label">Filtro combustible</span><span class="srv-val">${yn2(s.filtroComb)}</span></div>
+        <div class="srv-campo"><span class="srv-label">Filtro habitáculo</span><span class="srv-val">${yn2(s.filtroHab)}</span></div>
+        <div class="srv-campo"><span class="srv-label">Caja / Diferencial</span><span class="srv-val">${yn2(s.cajaDif)}</span></div>
+        ${s.escobillas?`<div class="srv-campo"><span class="srv-label">Escobillas</span><span class="srv-val">${yn2(s.escobillas)}</span></div>`:''}
+        ${s.lamparas?`<div class="srv-campo"><span class="srv-label">Lámparas</span><span class="srv-val">${yn2(s.lamparas)}</span></div>`:''}
+        ${s.aditivos?`<div class="srv-campo"><span class="srv-label">Aditivos</span><span class="srv-val">${s.aditivos}</span></div>`:''}
+      </div>
+    </div>
+    ${s.fluidos?`<div style="margin-bottom:8px"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#888">Fluidos revisados</span><div style="font-size:13px;margin-top:2px">${s.fluidos}</div>${s.obsFluidos?`<div style="font-size:12px;color:#888;font-style:italic">${s.obsFluidos}</div>`:''}</div>`:''}
+    ${s.otros?`<div style="padding:10px 12px;background:#fffbf0;border-radius:4px;border-left:3px solid var(--gold);font-size:13px">💬 ${s.otros}</div>`:''}
+    <div style="display:flex;justify-content:center;margin-top:16px">
+      <button class="btn-p" onclick="srv_verHistorial('${s.patente}');cerrarModal('srv-ficha-modal')">📋 Ver todo el historial de ${s.patente}</button>
+    </div>`;
+  document.getElementById('srv-ficha-modal').classList.add('open');
+};
+
+window.srv_verHistorial = function(patente) {
+  const pat = patente.toUpperCase();
+  const services = srvGetItems().filter(s=>s.patente===pat).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.getElementById('shm-title').textContent = 'Historial — ' + pat;
+  const el = document.getElementById('shm-body');
+  if(!services.length){ el.innerHTML='<div class="empty">Sin services registrados para '+pat+'.</div>'; return; }
+  // Info del vehículo (del último service)
+  const last = services[0];
+  el.innerHTML = `
+    <div style="background:var(--black);color:#fff;padding:12px 14px;border-radius:4px;margin-bottom:14px;border-bottom:3px solid var(--gold)">
+      <div style="font-size:18px;font-weight:700">${pat}</div>
+      <div style="font-size:13px;color:#ccc">${last.vehiculo||''} ${last.modelo||''} ${last.cliente?' — '+last.cliente:''}</div>
+      <div style="font-size:11px;color:#aaa;margin-top:4px">${services.length} service${services.length!==1?'s':''} registrado${services.length!==1?'s':''}</div>
+    </div>
+    <div style="position:relative;padding-left:20px;border-left:2px solid var(--gray-mid)">
+      ${services.map((s,i)=>`
+        <div style="position:relative;margin-bottom:16px">
+          <div style="position:absolute;left:-25px;top:4px;width:10px;height:10px;border-radius:50%;background:${i===0?'var(--gold)':'var(--gray-mid)'};border:2px solid #fff"></div>
+          ${srvCardHtml(s)}
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('srv-hist-modal').classList.add('open');
+};
+
+window.srv_onEmpresaSel=function(val){const w=document.getElementById('snv-cliente-otro-wrap'),h=document.getElementById('snv-cliente');if(w)w.style.display=val==='__otro__'?'block':'none';if(h&&val!=='__otro__')h.value=val;};
+window.srv_onVehiculoSel=function(val){const w=document.getElementById('snv-vehiculo-otro-wrap'),h=document.getElementById('snv-vehiculo');if(w)w.style.display=val==='__otro__'?'block':'none';if(h&&val!=='__otro__')h.value=val;};
+window.srv_onAceiteSel=function(val){const w=document.getElementById('snv-aceite-otro-wrap'),h=document.getElementById('snv-aceite');if(w)w.style.display=val==='__otro__'?'block':'none';if(h&&val!=='__otro__')h.value=val;};
+function getRadio(name){const el=document.querySelector('input[name="'+name+'"]:checked');return el?el.value:'';}
+window.srv_autocompletarPatente=function(val){
+  const pat=val.toUpperCase().trim();if(pat.length<4)return;
+  const found=srvGetItems().find(s=>s.patente===pat);if(!found)return;
+  const vSel=document.getElementById('snv-vehiculo-sel');
+  if(vSel&&!vSel.value&&found.vehiculo){const op=[...vSel.options].find(o=>o.value===found.vehiculo);if(op){vSel.value=found.vehiculo;const h=document.getElementById('snv-vehiculo');if(h)h.value=found.vehiculo;}}
+  const cSel=document.getElementById('snv-cliente-sel');
+  if(cSel&&!cSel.value&&found.cliente){const op=[...cSel.options].find(o=>o.value===found.cliente);if(op){cSel.value=found.cliente;const h=document.getElementById('snv-cliente');if(h)h.value=found.cliente;}}
+  const tlEl=document.getElementById('snv-tel');if(tlEl&&!tlEl.value)tlEl.value=found.tel||'';
+  const emEl=document.getElementById('snv-email');if(emEl&&!emEl.value)emEl.value=found.email||'';
+};
+window.srv_guardar=async function(){
+  const patente=(document.getElementById('snv-patente')?.value||'').trim().toUpperCase();
+  const km=parseInt(document.getElementById('snv-km')?.value)||0;
+  if(!patente){alert('La patente es obligatoria');return;}
+  let cliente=document.getElementById('snv-cliente')?.value||'';
+  const sC=document.getElementById('snv-cliente-sel')?.value||'';
+  if(sC==='__otro__')cliente=document.getElementById('snv-cliente-otro')?.value.trim()||'';
+  else if(sC&&sC!=='')cliente=sC;
+  let vehiculo=document.getElementById('snv-vehiculo')?.value||'';
+  const sV=document.getElementById('snv-vehiculo-sel')?.value||'';
+  if(sV==='__otro__')vehiculo=document.getElementById('snv-vehiculo-otro')?.value.trim()||'';
+  else if(sV&&sV!=='')vehiculo=sV;
+  let aceite=document.getElementById('snv-aceite')?.value||'';
+  const sA=document.getElementById('snv-aceite-sel')?.value||'';
+  if(sA==='__otro__')aceite=document.getElementById('snv-aceite-otro')?.value.trim()||'';
+  else if(sA&&sA!=='')aceite=sA;
+  const envasado=getRadio('snv-envasado');
+  let tipoAceite=getRadio('snv-tipo-aceite');
+  if(tipoAceite==='__otro__')tipoAceite=document.getElementById('snv-tipo-aceite-otro')?.value.trim()||'';
+  if(envasado)tipoAceite=(tipoAceite?tipoAceite+' — ':'')+envasado;
+  let cajaDif=getRadio('snv-caja');
+  if(cajaDif==='__otro__')cajaDif=document.getElementById('snv-caja-otro')?.value.trim()||'';
+  const fluidos=document.getElementById('snv-fluidos-cb')?.checked?'Liquido de Frenos, Refrigerante, Hidráulico':'';
+  const itms=srvGetItems(),mxC=itms.length?Math.max(...itms.map(s=>s.codigo||0)):0;
+  const codigo=mxC+1;
+  const nuevoSrv={
+    id:Date.now(),codigo,fecha:hoy(),patente,cliente,
+    tel:document.getElementById('snv-tel')?.value.trim()||'',
+    email:document.getElementById('snv-email')?.value.trim()||'',
+    vehiculo,modelo:'',km,aceite,tipoAceite,
+    filtroAceite:getRadio('snv-f-aceite'),filtroAire:getRadio('snv-f-aire'),
+    filtroComb:getRadio('snv-f-comb'),filtroHab:getRadio('snv-f-hab'),
+    cajaDif,aditivos:document.getElementById('snv-aditivos')?.value.trim()||'',
+    otros:document.getElementById('snv-otros')?.value.trim()||'',
+    fluidos,obsFluidos:document.getElementById('snv-obs-fluidos')?.value.trim()||'',
+    escobillas:document.getElementById('snv-esc-cb')?.checked?'SI':'NO',
+    lamparas:document.getElementById('snv-lamp-cb')?.checked?'SI':'NO',
+  };
+  if(!S.services)S.services={items:[]};
+  S.services.items.push(nuevoSrv);
+  S.services.items.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  await save('services');
+  showToast('Service N°'+codigo+' guardado — '+patente);
+  ['snv-patente','snv-km','snv-tel','snv-email','snv-aditivos','snv-otros','snv-obs-fluidos','snv-cliente-otro','snv-vehiculo-otro','snv-aceite-otro','snv-caja-otro','snv-tipo-aceite-otro'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['snv-cliente-sel','snv-vehiculo-sel','snv-aceite-sel'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.querySelectorAll('input[name^="snv-"]').forEach(r=>{if(r.type==='radio'||r.type==='checkbox')r.checked=false;});
+  const fCb=document.getElementById('snv-fluidos-cb');if(fCb)fCb.checked=true;
+  ['snv-cliente-otro-wrap','snv-vehiculo-otro-wrap','snv-aceite-otro-wrap'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  const codEl=document.getElementById('snv-codigo');if(codEl)codEl.value=codigo+1;
+  const tabs=document.querySelectorAll('#srv-tw .tab'),panels=document.querySelectorAll('#srv-wrap .panel');
+  tabs.forEach(t=>t.classList.remove('active'));panels.forEach(p=>p.classList.remove('active'));
+  tabs[0].classList.add('active');panels[0].classList.add('active');
+  const si=document.getElementById('srv-search-input');if(si){si.value=patente;srv_search(patente);}
+};
+window.srv_renderStats = function() {
+  const el = document.getElementById('srv-stats-content'); if(!el) return;
+  const items = srvGetItems();
+  if(!items.length){el.innerHTML='<div class="empty">Sin datos.</div>';return;}
+
+  // Top marcas
+  const marcas = {};
+  items.forEach(s=>{const m=(s.vehiculo||'sin dato').split(' ')[0].toUpperCase();marcas[m]=(marcas[m]||0)+1;});
+  const topMarcas = Object.entries(marcas).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // Top modelos
+  const modelos = {};
+  items.forEach(s=>{const m=((s.vehiculo||'')+(s.modelo?' '+s.modelo:'')).trim().toUpperCase()||'Sin dato';modelos[m]=(modelos[m]||0)+1;});
+  const topModelos = Object.entries(modelos).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  // Top aceites
+  const aceites = {};
+  items.forEach(s=>{if(s.aceite){const a=s.aceite.toUpperCase().split(' ')[0];aceites[a]=(aceites[a]||0)+1;}});
+  const topAceites = Object.entries(aceites).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // Por mes últimos 12 meses
+  const mesMap = {};
+  const hace12 = new Date(); hace12.setMonth(hace12.getMonth()-12);
+  items.filter(s=>s.fecha>=hace12.toISOString().split('T')[0]).forEach(s=>{
+    const m=s.fecha.slice(0,7); mesMap[m]=(mesMap[m]||0)+1;
+  });
+  const meses = Object.entries(mesMap).sort((a,b)=>a[0].localeCompare(b[0])).slice(-12);
+  const maxMes = Math.max(...meses.map(m=>m[1]),1);
+
+  const maxMarca = topMarcas[0]?.[1]||1;
+  const maxMod   = topModelos[0]?.[1]||1;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1rem">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Top marcas</div>
+        ${topMarcas.map(([m,n])=>`<div class="bar-wrap">
+          <div class="bar-label"><span>${m}</span><span>${n}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/maxMarca*100)}%;background:var(--gold)"></div></div>
+        </div>`).join('')}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Top aceites usados</div>
+        ${topAceites.map(([a,n])=>`<div class="bar-wrap">
+          <div class="bar-label"><span>${a}</span><span>${n}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/(topAceites[0][1]||1)*100)}%;background:#1a73e8"></div></div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Services por mes (últimos 12 meses)</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:80px">
+        ${meses.map(([m,n])=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="width:100%;background:var(--gold);border-radius:2px 2px 0 0" title="${nomMes(m)}: ${n}" style2="height:${Math.round(n/maxMes*70)}px"></div>
+          <div style="font-size:9px;color:#aaa;transform:rotate(-45deg);white-space:nowrap">${m.slice(5)}</div>
+        </div>`).map((html, i)=>html.replace('style2=', 'style=')).join('')}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Top 10 modelos</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr><th style="text-align:left;padding:5px 8px;border-bottom:2px solid #eee">#</th><th style="text-align:left;padding:5px 8px;border-bottom:2px solid #eee">Modelo</th><th style="text-align:right;padding:5px 8px;border-bottom:2px solid #eee">Services</th></tr></thead>
+        <tbody>${topModelos.map(([m,n],i)=>`<tr style="border-bottom:1px solid #f5f5f5"><td style="padding:5px 8px;color:#aaa">${i+1}</td><td style="padding:5px 8px;font-weight:600">${m}</td><td style="padding:5px 8px;text-align:right">${n}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+};
+
+window.srv_importarExcel = async function(input) {
+  const file = input.files[0]; if(!file) return;
+  input.value='';
+  const prog = document.getElementById('srv-import-progress');
+  if(prog) prog.innerHTML='<div style="color:#1a73e8;font-size:13px">⏳ Leyendo archivo...</div>';
+  const XLSX = window.XLSX;
+  if(!XLSX){alert('Error: librería Excel no disponible. Recargá la página.');return;}
+  const buf = await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=()=>rej();r.readAsArrayBuffer(file);});
+  const wb = XLSX.read(buf,{type:'array',cellDates:true});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+  if(!rows.length){if(prog)prog.innerHTML='<div style="color:var(--red)">Sin datos en el archivo.</div>';return;}
+
+  function excelDate(val) {
+    if(!val) return '';
+    if(val instanceof Date){const y=val.getFullYear(),m=String(val.getMonth()+1).padStart(2,'0'),d=String(val.getDate()).padStart(2,'0');return y+'-'+m+'-'+d;}
+    if(typeof val==='number'){const d=new Date(Math.round((val-25569)*86400*1000));return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
+    return '';
+  }
+  function cl(v){if(v===null||v===undefined)return '';const s=String(v).trim();return s.toLowerCase()==='#ref!'||s.toLowerCase()==='none'?'':s;}
+  function safeKm(v){try{return parseInt(parseFloat(cl(v)))||0;}catch{return 0;}}
+
+  if(prog) prog.innerHTML='<div style="color:#1a73e8;font-size:13px">⏳ Procesando '+rows.length.toLocaleString('es-AR')+' filas...</div>';
+  await new Promise(r=>setTimeout(r,50));
+
+  if(!S.services) S.services={items:[]};
+  const existingIds = new Set(S.services.items.map(s=>s.id));
+  let nuevos=0, duplicados=0;
+
+  rows.forEach((row,i)=>{
+    const cod = cl(row['Código de Service']);
+    const fecha = excelDate(row['Marca temporal']);
+    if(!cod||!fecha) return;
+    let sid; try{sid=Math.round(parseFloat(cod));}catch{sid=Date.now()+i;}
+    if(existingIds.has(sid)){duplicados++;return;}
+    S.services.items.push({
+      id:sid, fecha,
+      patente: cl(row['Patente']).toUpperCase(),
+      cliente: cl(row['Nombre | Empresa']),
+      tel:     cl(row['Telefono']),
+      email:   cl(row['Correo Electrónico']),
+      vehiculo:cl(row['Vehículo']),
+      modelo:  cl(row['Modelo']),
+      km:      safeKm(row['KM']),
+      fluidos: cl(row['Revisión de fluidos (Liquido de Frenos, Refrigerante, Hidráulico)']),
+      obsFluidos: cl(row['Observaciones de la revisión de fluidos']),
+      aceite:  cl(row['Aceite Motor']),
+      filtroAceite: cl(row['Filtro de Aceite']),
+      filtroAire:   cl(row['Filtro de Aire']),
+      filtroComb:   cl(row['Filtro de Combustible']),
+      filtroHab:    cl(row['Filtro de Habitáculo']),
+      cajaDif: cl(row['Caja | Diferencial']),
+      aditivos:cl(row['Aditivos']),
+      otros:   cl(row['Otros (Observaciones)']),
+      tipoAceite: cl(row['Tipo de Aceite'])||cl(row['Tipo de Aceite_1'])||'',
+      escobillas: cl(row['Escobillas']),
+      lamparas:   cl(row['Lámparas']),
+    });
+    existingIds.add(sid);
+    nuevos++;
+  });
+
+  S.services.items.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  if(prog) prog.innerHTML='<div style="color:#1a73e8;font-size:13px">⏳ Guardando '+nuevos.toLocaleString('es-AR')+' services en Firebase...</div>';
+  await new Promise(r=>setTimeout(r,50));
+  await save('services');
+  if(prog) prog.innerHTML=`<div style="color:var(--green);font-size:13px">✅ Importación completa: <strong>${nuevos.toLocaleString('es-AR')}</strong> services nuevos, ${duplicados} ya existían.</div>`;
+  showToast('✓ '+nuevos.toLocaleString('es-AR')+' services importados');
+  renderServices();
+};
+
 // ══════════════════════════════════════════════════════════
 // CLIENTES Y PROVEEDORES
 // ══════════════════════════════════════════════════════════
@@ -3665,6 +4865,10 @@ window.copiar = copiar;
 window.renderContactos = renderContactos;
 window.renderBaterias = renderBaterias;
 window.renderMercaderia = renderMercaderia;
+window.renderServices = renderServices;
+window.srv_renderBuscar = srv_renderBuscar;
+window.srv_renderStats = srv_renderStats;
+window.srvSetFiltro = srvSetFiltro;
 window.merc_render = merc_render;
 window.merc_renderHist = merc_renderHist;
 window.merc_renderCards = merc_renderCards;
@@ -3717,6 +4921,29 @@ document.head.appendChild(tableStyle);
 
 
 
+
+<!-- MODAL FICHA SERVICE -->
+<div class="modal-overlay" id="srv-ficha-modal">
+  <div class="modal-box ficha-modal" style="max-width:650px;padding:0;overflow:hidden">
+    <div class="ficha-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="srv-patente" id="sfm-patente">—</div>
+          <div style="font-size:13px;color:#ccc" id="sfm-vehiculo">—</div>
+        </div>
+        <button class="modal-close" onclick="cerrarModal('srv-ficha-modal')" style="color:#ccc">✕</button>
+      </div>
+    </div>
+    <div style="padding:20px" id="sfm-body"></div>
+  </div>
+</div>
+<!-- MODAL HISTORIAL PATENTE -->
+<div class="modal-overlay" id="srv-hist-modal">
+  <div class="modal-box" style="max-width:700px;max-height:88vh">
+    <div class="modal-title"><span id="shm-title">Historial</span><button class="modal-close" onclick="cerrarModal('srv-hist-modal')">✕</button></div>
+    <div id="shm-body"></div>
+  </div>
+</div>
 <!-- MODAL PROVEEDOR -->
 <div class="modal-overlay" id="prov-modal">
   <div class="modal-box" style="max-width:580px">
