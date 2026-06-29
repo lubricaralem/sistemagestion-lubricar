@@ -2658,6 +2658,7 @@ function bat_getEstado(b) {
 }
 
 let batFiltro = 'activas';
+let batTipoVentaAct = 'moura_ya';
 
 function renderBaterias() {
   const mc = document.getElementById('mod-content');
@@ -2743,6 +2744,20 @@ function renderBaterias() {
                 style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:Montserrat,sans-serif;resize:vertical"
                 placeholder="Observaciones generales..."></textarea></div>
           </div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Tipo de venta / instalación *</div>
+            <div class="estado-selector" id="bat-nuevo-tipo" style="grid-template-columns:repeat(3,1fr)">
+              <button class="es-btn active-pedido" onclick="batSetTipoVenta('moura_ya',this)" style="border-color:#1a73e8;background:#e8f0fe;color:#1a73e8">🔋<br>Moura Ya</button>
+              <button class="es-btn" onclick="batSetTipoVenta('domicilio',this)">🚗<br>Colocada a domicilio</button>
+              <button class="es-btn" onclick="batSetTipoVenta('lubricar',this)">🏪<br>En Lubricar Alem</button>
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:16px;max-width:280px">
+            <label>Instalador</label>
+            <select id="bat-instalador">
+              <option value="">— Sin especificar —</option>
+            </select>
+          </div>
           <button class="btn-p" onclick="bat_guardar()">+ Registrar batería</button>
         </div>
       </div>
@@ -2752,6 +2767,7 @@ function renderBaterias() {
   cont_dlUpdate();
   document.getElementById('bat-fventa').value = hoy();
   bat_calcPreview();
+  bat_pobInstaladores('bat-instalador');
   bat_render();
 }
 
@@ -2764,6 +2780,20 @@ window.batSetFiltro = function(filtro, btn) {
   document.querySelectorAll('#bat-lista-p .filter-row .fb').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   bat_render();
+};
+
+function bat_pobInstaladores(selectId, selected) {
+  const sel = document.getElementById(selectId); if(!sel) return;
+  const empleados = (S.sueldos?.empleados||[]).filter(e=>e.activo);
+  sel.innerHTML = '<option value="">— Sin especificar —</option>' +
+    empleados.map(e=>'<option value="'+e.nombre+'"'+(selected===e.nombre?' selected':'')+'>'+e.nombre+'</option>').join('');
+}
+
+window.batSetTipoVenta = function(tipo, btn) {
+  batTipoVentaAct = tipo;
+  document.querySelectorAll('#bat-nuevo-tipo .es-btn').forEach(b=>{ b.className='es-btn'; b.style=''; });
+  const colores = {moura_ya:'border-color:#1a73e8;background:#e8f0fe;color:#1a73e8', domicilio:'border-color:#e37400;background:#fef7e0;color:#b06000', lubricar:'border-color:var(--gold);background:#fdf3d6;color:var(--gold-dark)'};
+  btn.style = colores[tipo]||'';
 };
 
 window.bat_calcPreview = function() {
@@ -2789,6 +2819,8 @@ window.bat_guardar = async function() {
     garantia:  parseInt(garantia),
     fechaFin:  bat_calcFin(fventa, garantia),
     comentarios: document.getElementById('bat-comentarios').value.trim(),
+    tipoVenta: batTipoVentaAct,
+    instalador: document.getElementById('bat-instalador')?.value||'',
     devolucion: null
   });
   S.baterias.items.sort((a,b)=>b.fventa.localeCompare(a.fventa));
@@ -2798,6 +2830,9 @@ window.bat_guardar = async function() {
   });
   document.getElementById('bat-garantia').value='12';
   document.getElementById('bat-fventa').value=hoy();
+  batTipoVentaAct='moura_ya';
+  document.querySelectorAll('#bat-nuevo-tipo .es-btn').forEach((b,i)=>{b.className='es-btn'+(i===0?' active-pedido':'');b.style=i===0?'border-color:#1a73e8;background:#e8f0fe;color:#1a73e8':'';});
+  const instEl=document.getElementById('bat-instalador');if(instEl)instEl.value='';
   bat_calcPreview();
   // Switch to list tab
   const tabs = document.querySelectorAll('#bat-tw .tab');
@@ -2973,6 +3008,13 @@ function bat_render() {
 }
 
 
+let batEditTipoAct = 'moura_ya';
+window.batEditSetTipo = function(tipo, btn) {
+  batEditTipoAct = tipo;
+  document.querySelectorAll('#bat-edit-tipo .es-btn').forEach(b=>{b.className='es-btn';b.style='';});
+  const colores = {moura_ya:'border-color:#1a73e8;background:#e8f0fe;color:#1a73e8', domicilio:'border-color:#e37400;background:#fef7e0;color:#b06000', lubricar:'border-color:var(--gold);background:#fdf3d6;color:var(--gold-dark)'};
+  btn.style = colores[tipo]||'';
+};
 window.bat_abrirEdit = function(id) {
   const b = S.baterias.items.find(x=>x.id===id); if(!b) return;
   document.getElementById('bat-edit-id').value = id;
@@ -2983,6 +3025,12 @@ window.bat_abrirEdit = function(id) {
   document.getElementById('bat-edit-garantia').value  = String(b.garantia||12);
   document.getElementById('bat-edit-fin').value       = b.fechaFin ? fmtF(b.fechaFin) : '';
   document.getElementById('bat-edit-comentarios').value = b.comentarios||'';
+  batEditTipoAct = b.tipoVenta||'moura_ya';
+  const tipoMap={moura_ya:0,domicilio:1,lubricar:2};
+  const idx=tipoMap[batEditTipoAct]??0;
+  const colores={moura_ya:'border-color:#1a73e8;background:#e8f0fe;color:#1a73e8',domicilio:'border-color:#e37400;background:#fef7e0;color:#b06000',lubricar:'border-color:var(--gold);background:#fdf3d6;color:var(--gold-dark)'};
+  document.querySelectorAll('#bat-edit-tipo .es-btn').forEach((btn,i)=>{ btn.className='es-btn'; btn.style = i===idx?colores[batEditTipoAct]:''; });
+  bat_pobInstaladores('bat-edit-instalador', b.instalador||'');
   cont_dlUpdate();
   document.getElementById('bat-edit-modal').classList.add('open');
 };
@@ -3006,6 +3054,8 @@ window.bat_guardarEdit = async function() {
   b.garantia  = parseInt(garantia);
   b.fechaFin  = bat_calcFin(fventa, garantia);
   b.comentarios = document.getElementById('bat-edit-comentarios').value.trim();
+  b.tipoVenta = batEditTipoAct;
+  b.instalador = document.getElementById('bat-edit-instalador')?.value||'';
   await save('baterias');
   cerrarModal('bat-edit-modal');
   bat_render();
@@ -4997,6 +5047,18 @@ document.head.appendChild(tableStyle);
       <div class="fg"><label>Garantía</label><select id="bat-edit-garantia" onchange="bat_editCalcFin()"><option value="6">6 meses</option><option value="12">12 meses</option><option value="18">18 meses</option><option value="24">24 meses</option></select></div>
       <div class="fg"><label>Vence el</label><input type="text" id="bat-edit-fin" readonly style="background:#f0f7ff;font-weight:700;color:var(--green)"/></div>
       <div class="fg" style="grid-column:1/-1"><label>Comentarios</label><textarea id="bat-edit-comentarios" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--gray-mid);border-radius:3px;font-size:13px;background:#fafafa;font-family:Montserrat,sans-serif;resize:vertical"></textarea></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#555;margin-bottom:8px">Tipo de venta / instalación</div>
+      <div class="estado-selector" id="bat-edit-tipo" style="grid-template-columns:repeat(3,1fr)">
+        <button class="es-btn" onclick="batEditSetTipo('moura_ya',this)">🔋<br>Moura Ya</button>
+        <button class="es-btn" onclick="batEditSetTipo('domicilio',this)">🚗<br>Domicilio</button>
+        <button class="es-btn" onclick="batEditSetTipo('lubricar',this)">🏪<br>Lubricar Alem</button>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:16px;max-width:280px">
+      <label>Instalador</label>
+      <select id="bat-edit-instalador"><option value="">— Sin especificar —</option></select>
     </div>
     <div style="display:flex;gap:10px;margin-top:4px">
       <button class="btn-p" style="flex:1" onclick="bat_guardarEdit()">Guardar cambios</button>
