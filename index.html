@@ -2696,7 +2696,7 @@ function renderBaterias() {
     <div class="tab-row" id="bat-tw">
       <button class="tab active" onclick="setTab('bat-lista-p',this,'#bat-wrap');bat_render()">🔋 Garantías</button>
       <button class="tab" onclick="setTab('bat-nueva-p',this,'#bat-wrap')">+ Nueva batería</button>
-      <button class="tab" onclick="setTab('bat-stats-p',this,'#bat-wrap');bat_renderStats()">📊 Estadísticas</button>
+      ${isAdmin()?'<button class="tab" onclick="setTab(\'bat-stats-p\',this,\'#bat-wrap\');bat_renderStats()">📊 Estadísticas</button>':''}
     </div>
     <div id="bat-wrap">
 
@@ -2760,7 +2760,7 @@ function renderBaterias() {
                 <option value="">— Sin especificar —</option>
               </select>
             </div>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 14px;background:var(--gray-light);border-radius:3px;border:1px solid var(--gray-mid)">
+            <label id="bat-paga-wrap" style="display:none;align-items:center;gap:8px;cursor:pointer;padding:9px 14px;background:var(--gray-light);border-radius:3px;border:1px solid var(--gray-mid)">
               <input type="checkbox" id="bat-paga" style="width:17px;height:17px;accent-color:var(--gold)">
               <span style="font-size:13px;font-weight:700">¿Paga?</span>
             </label>
@@ -2782,6 +2782,7 @@ function renderBaterias() {
   document.getElementById('bat-fventa').value = hoy();
   bat_calcPreview();
   bat_pobInstaladores('bat-instalador');
+  const pgWrap=document.getElementById('bat-paga-wrap');if(pgWrap)pgWrap.style.display=isAdmin()?'flex':'none';
   bat_render();
 }
 
@@ -3082,7 +3083,7 @@ function bat_render() {
       (b.tipoVenta||b.instalador?'<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
         (b.tipoVenta?'<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:3px;'+(b.tipoVenta==='moura_ya'?'background:#e8f0fe;color:#1a73e8':b.tipoVenta==='domicilio'?'background:#fef7e0;color:#b06000':'background:#fdf3d6;color:var(--gold-dark)')+'">'+({moura_ya:'🔋 Moura Ya',domicilio:'🚗 Colocada a domicilio',lubricar:'🏪 En Lubricar Alem'}[b.tipoVenta]||b.tipoVenta)+'</span>':'') +
         (b.instalador?'<span style="font-size:11px;color:#888">🔧 '+b.instalador+'</span>':'') +
-        '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:700;margin-left:auto;padding:3px 8px;border-radius:3px;'+(b.paga?'background:#e6f4ea;color:var(--green)':'background:#f5f5f5;color:#999')+'"><input type="checkbox" '+(b.paga?'checked':'')+' onchange="bat_togglePaga('+b.id+',this.checked)" style="width:14px;height:14px;accent-color:var(--gold)"> ¿Paga?</label>'+
+        (isAdmin()?'<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:700;margin-left:auto;padding:3px 8px;border-radius:3px;'+(b.paga?'background:#e6f4ea;color:var(--green)':'background:#f5f5f5;color:#999')+'"><input type="checkbox" '+(b.paga?'checked':'')+' onchange="bat_togglePaga('+b.id+',this.checked)" style="width:14px;height:14px;accent-color:var(--gold)"> ¿Paga?</label>':'')+
       '</div>':'') +
       // Meta row
       '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#888;margin-bottom:6px">' +
@@ -3139,6 +3140,7 @@ window.bat_abrirEdit = function(id) {
   document.querySelectorAll('#bat-edit-tipo .es-btn').forEach((btn,i)=>{ btn.className='es-btn'; btn.style = i===idx?colores[batEditTipoAct]:''; });
   bat_pobInstaladores('bat-edit-instalador', b.instalador||'');
   const pagaEditEl=document.getElementById('bat-edit-paga');if(pagaEditEl)pagaEditEl.checked=b.paga||false;
+  const pgEditWrap=document.getElementById('bat-edit-paga-wrap');if(pgEditWrap)pgEditWrap.style.display=isAdmin()?'flex':'none';
   cont_dlUpdate();
   document.getElementById('bat-edit-modal').classList.add('open');
 };
@@ -5170,7 +5172,7 @@ document.head.appendChild(tableStyle);
         <label>Instalador</label>
         <select id="bat-edit-instalador"><option value="">— Sin especificar —</option></select>
       </div>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 14px;background:var(--gray-light);border-radius:3px;border:1px solid var(--gray-mid)">
+      <label id="bat-edit-paga-wrap" style="display:none;align-items:center;gap:8px;cursor:pointer;padding:9px 14px;background:var(--gray-light);border-radius:3px;border:1px solid var(--gray-mid)">
         <input type="checkbox" id="bat-edit-paga" style="width:17px;height:17px;accent-color:var(--gold)">
         <span style="font-size:13px;font-weight:700">¿Paga?</span>
       </label>
