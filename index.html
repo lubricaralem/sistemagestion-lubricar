@@ -286,6 +286,7 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 @media(max-width:600px){.kanban-grid{grid-template-columns:1fr}}
 /* Dentro de cada columna las cards fluyen normalmente */
 .kanban-grid > div{display:flex;flex-direction:column;gap:12px}
+.ped-col{display:flex;flex-direction:column;gap:10px}
 /* Ajustes de card en kanban */
 .pedido-card{padding:14px;margin-bottom:0}
 .bat-card{padding:14px;margin-bottom:0}
@@ -325,6 +326,26 @@ body{font-family:'Montserrat',Arial,sans-serif;font-size:14px;color:var(--black)
 .srv-stat{background:#fff;border:1px solid var(--gray-mid);border-radius:4px;padding:12px;text-align:center}
 .srv-stat-n{font-size:22px;font-weight:700;color:var(--gold-dark)}
 .srv-stat-l{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:.5px;margin-top:2px}
+
+
+/* ── PEDIDOS DRAG & DROP + PRIORIDAD ── */
+.pedido-card{cursor:grab}
+.pedido-card:active{cursor:grabbing}
+.pedido-card.dragging{opacity:.4;transform:scale(.97);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.pedido-card.drag-over{outline:3px dashed var(--gold);outline-offset:2px}
+.ped-prioridad-btns{display:flex;gap:5px;align-items:center}
+.prio-btn{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s;flex-shrink:0}
+.prio-btn:hover{transform:scale(1.2)}
+.prio-btn.prio-rojo{background:#fce8e6;border-color:#d93025}
+.prio-btn.prio-amarillo{background:#fef7e0;border-color:#e37400}
+.prio-btn.prio-verde{background:#e6f4ea;border-color:#1e8e3e}
+.prio-btn.active.prio-rojo{background:#d93025}
+.prio-btn.active.prio-amarillo{background:#e37400}
+.prio-btn.active.prio-verde{background:#1e8e3e}
+/* Border izquierdo por prioridad */
+.pedido-card.prio-rojo{border-top-color:#d93025!important}
+.pedido-card.prio-amarillo{border-top-color:#e37400!important}
+.pedido-card.prio-verde{border-top-color:#1e8e3e!important}
 
 </style>
 </head>
@@ -2269,6 +2290,26 @@ window.pedSetNuevoEstado = function(est, btn) {
   btn.className = 'es-btn active-' + est;
 };
 
+
+window.ped_setPrioridad = async function(id, prio) {
+  const p = S.pedidos.items.find(x=>x.id===id); if(!p) return;
+  p.prioridad = p.prioridad === prio ? '' : prio; // toggle
+  await save('pedidos');
+  ped_render();
+};
+
+window.ped_moverOrden = async function(fromId, toId) {
+  if(fromId === toId) return;
+  const items = S.pedidos.items;
+  const fromIdx = items.findIndex(x=>x.id===fromId);
+  const toIdx   = items.findIndex(x=>x.id===toId);
+  if(fromIdx<0||toIdx<0) return;
+  const [moved] = items.splice(fromIdx, 1);
+  items.splice(toIdx, 0, moved);
+  await save('pedidos');
+  ped_render();
+};
+
 window.ped_guardar = async function() {
   const cliente = document.getElementById('ped-cliente').value.trim();
   const desc    = document.getElementById('ped-desc').value.trim();
@@ -2284,6 +2325,8 @@ window.ped_guardar = async function() {
     obs:         document.getElementById('ped-obs').value.trim(),
     estado:      pedNuevoEstado,
     fechaCarga:  hoy(),
+    prioridad:   '',
+    orden:       S.pedidos.items.filter(p=>p.estado!=='retirado').length,
   });
   S.pedidos.items.sort((a,b)=>b.fechaCarga.localeCompare(a.fechaCarga));
   await save('pedidos');
@@ -2335,63 +2378,125 @@ function ped_renderCards() {
 function ped_render() {
   let lista = S.pedidos.items.slice();
   const buscar = (document.getElementById('ped-buscar')?.value||'').toLowerCase();
-  if(pedFiltro==='activos')   lista = lista.filter(p=>p.estado!=='retirado');
-  else if(pedFiltro==='listo')    lista = lista.filter(p=>p.estado==='listo');
-  else if(pedFiltro==='espera')   lista = lista.filter(p=>p.estado==='espera');
-  else if(pedFiltro==='preparar') lista = lista.filter(p=>p.estado==='preparar');
-  else if(pedFiltro==='pedido')   lista = lista.filter(p=>p.estado==='pedido');
-  if(buscar) lista = lista.filter(p=>p.cliente.toLowerCase().includes(buscar)||p.desc.toLowerCase().includes(buscar));
+  if(pedFiltro==='activos')    lista = lista.filter(p=>p.estado!=='retirado');
+  else if(pedFiltro==='listo') lista = lista.filter(p=>p.estado==='listo');
+  else if(pedFiltro==='espera')lista = lista.filter(p=>p.estado==='espera');
+  else if(pedFiltro==='preparar')lista=lista.filter(p=>p.estado==='preparar');
+  else if(pedFiltro==='pedido')lista=lista.filter(p=>p.estado==='pedido');
+  if(buscar) lista = lista.filter(p=>(p.cliente||'').toLowerCase().includes(buscar)||(p.desc||'').toLowerCase().includes(buscar));
 
   const bd=document.getElementById('ped-badge'); if(bd) bd.textContent=lista.length;
   const el=document.getElementById('ped-lista'); if(!el) return;
   if(!lista.length){el.innerHTML='<div class="empty">No hay pedidos en este filtro.</div>';return;}
 
-  // Agrupar en 3 columnas tipo Trello (order-based, not by state)
-  const orden = {listo:0, preparar:1, espera:2, pedido:3, retirado:4};
-  lista.sort((a,b)=>(orden[a.estado]??5)-(orden[b.estado]??5)||a.fechaCarga.localeCompare(b.fechaCarga));
-
-  // Distribuir en 3 columnas
-  const cols = [[], [], []];
-  lista.forEach((p, i) => cols[i % 3].push(p));
-
   function pedCard(p) {
     const est = ESTADOS_PEDIDO.find(e=>e.id===p.estado)||ESTADOS_PEDIDO[0];
     const descHtml = (p.desc||'').split(String.fromCharCode(10)).join('<br>');
+    const prio = p.prioridad||'';
+    const prioBorderCls = prio?'prio-'+prio:'';
+
     const estadoSelector = ESTADOS_PEDIDO.map(e=>{
       const isAct = p.estado===e.id;
-      return '<button class="es-btn' + (isAct?' active-'+e.id:'') + '" onclick="ped_cambiarEstado('+p.id+',\''+e.id+'\',event)" title="'+e.label+'" style="min-width:auto;padding:6px 4px;flex:1"><div style="font-size:15px">'+e.icon+'</div><div style="font-size:9px">'+e.label+'</div></button>';
+      return '<button class="es-btn' + (isAct?' active-'+e.id:'') + '" onclick="ped_cambiarEstado('+p.id+',\''+e.id+'\',event)" title="'+e.label+'">'
+        +'<div style="font-size:15px">'+e.icon+'</div>'
+        +'<div style="font-size:9px">'+e.label+'</div>'
+        +'</button>';
     }).join('');
-    return '<div class="pedido-card st-'+p.estado+'" id="pedcard-'+p.id+'">' +
-      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:8px">' +
-        '<div style="flex:1;min-width:0"><div class="pedido-nombre" style="font-size:15px">' + p.cliente + '</div></div>' +
-        '<span class="pedido-estado ' + est.cls + '" style="font-size:10px;white-space:nowrap">' + est.icon + ' ' + est.label + '</span>' +
-      '</div>' +
-      '<div style="font-size:12px;color:#444;line-height:1.4;margin-bottom:8px">' + descHtml + '</div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' +
-        '<span class="pedido-stock ' + (p.stock==='si'?'stock-si':'stock-no') + '">' + (p.stock==='si'?'En stock':'A pedir') + '</span>' +
-        (p.proveedor?'<span style="font-size:11px;color:#888">🏭 '+p.proveedor+'</span>':'') +
-      '</div>' +
-      '<div class="pedido-meta" style="font-size:11px">' +
-        '<span>📅 ' + fmtF(p.fechaCarga) + '</span>' +
-        (p.fCliente?'<span>🚗 '+fmtF(p.fCliente)+'</span>':'') +
-      '</div>' +
-      (p.obs?'<div style="font-size:11px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin:6px 0">💬 '+p.obs+'</div>':'') +
-      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-mid)">' +
-        estadoSelector +
-      '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px dashed var(--gray-mid)">' +
-        '<button class="btn-s" onclick="ped_abrirEdit('+p.id+')" style="font-size:11px;padding:5px 12px">✏ Editar</button>' +
-        '<button class="btn-s" onclick="ped_del('+p.id+')" style="font-size:10px;padding:4px 8px;color:#bbb;border-color:#e0e0e0" title="Eliminar pedido">🗑</button>' +
-      '</div>' +
-    '</div>';
+
+    const prioBtns =
+      '<div class="ped-prioridad-btns" title="Prioridad">'
+      +'<button class="prio-btn prio-rojo'+(prio==='rojo'?' active':'')+'" onclick="ped_setPrioridad('+p.id+',\'rojo\')" title="Alta prioridad"></button>'
+      +'<button class="prio-btn prio-amarillo'+(prio==='amarillo'?' active':'')+'" onclick="ped_setPrioridad('+p.id+',\'amarillo\')" title="Media prioridad"></button>'
+      +'<button class="prio-btn prio-verde'+(prio==='verde'?' active':'')+'" onclick="ped_setPrioridad('+p.id+',\'verde\')" title="Baja prioridad"></button>'
+      +'</div>';
+
+    return '<div class="pedido-card st-'+p.estado+' '+prioBorderCls+'"'
+      +' id="pcard-'+p.id+'"'
+      +' draggable="true"'
+      +' data-id="'+p.id+'"'
+      +' ondragstart="pedDragStart(event,'+p.id+')"'
+      +' ondragover="pedDragOver(event)"'
+      +' ondragleave="pedDragLeave(event)"'
+      +' ondrop="pedDrop(event,'+p.id+')"'
+      +'>'
+      // Header
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:8px">'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-weight:700;font-size:15px">'+p.cliente+'</div>'
+          +'<div style="font-size:12px;color:#444;margin-top:4px;line-height:1.4">'+descHtml+'</div>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">'
+          +'<span class="pedido-estado '+est.cls+'" style="font-size:10px;white-space:nowrap">'+est.icon+' '+est.label+'</span>'
+          +'<span class="pedido-stock '+(p.stock==='si'?'stock-si':'stock-no')+'" style="font-size:10px">'+(p.stock==='si'?'En stock':'A pedir')+'</span>'
+        +'</div>'
+      +'</div>'
+      // Meta
+      +'<div class="pedido-meta" style="font-size:11px">'
+        +'<span>📅 '+fmtF(p.fechaCarga)+'</span>'
+        +(p.proveedor?'<span>🏭 '+p.proveedor+'</span>':'')
+        +(p.fCliente?'<span>🚗 '+fmtF(p.fCliente)+'</span>':'')
+        +(p.fechaRetiro?'<span>✅ '+fmtF(p.fechaRetiro)+'</span>':'')
+      +'</div>'
+      +(p.obs?'<div style="font-size:11px;color:#888;font-style:italic;padding:4px 8px;background:var(--gray-light);border-radius:3px;margin:6px 0">💬 '+p.obs+'</div>':'')
+      // Controles
+      +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-mid)">'+estadoSelector+'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px">'
+        +prioBtns
+        +'<div style="display:flex;gap:5px">'
+          +'<button class="btn-s" onclick="ped_abrirEdit('+p.id+')" style="font-size:11px;padding:5px 10px">✏ Editar</button>'
+          +'<button class="btn-s btn-del" onclick="ped_del('+p.id+')" style="font-size:11px;padding:5px 8px" title="Eliminar">🗑</button>'
+        +'</div>'
+      +'</div>'
+      // Handle visual para arrastrar
+      +'<div style="text-align:center;color:#ccc;font-size:11px;margin-top:4px;letter-spacing:3px" title="Arrastrá para reordenar">⠿⠿⠿</div>'
+    +'</div>';
   }
 
-  el.innerHTML = '<div class="kanban-grid">' +
-    cols.map(col =>
-      '<div>' + (col.length ? col.map(pedCard).join('') : '<div style="text-align:center;color:#ccc;padding:20px;font-size:12px">—</div>') + '</div>'
-    ).join('') +
-  '</div>';
+  // Distribuir en 3 columnas manteniendo el orden del array
+  const cols = [[], [], []];
+  lista.forEach((p,i) => cols[i%3].push(p));
+  el.innerHTML = '<div class="kanban-grid">'
+    + cols.map(col=>'<div class="ped-col">'+(col.length?col.map(pedCard).join(''):'')+'</div>').join('')
+    +'</div>';
 }
+
+// ── DRAG & DROP ──
+let pedDraggingId = null;
+
+window.pedDragStart = function(e, id) {
+  pedDraggingId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(id));
+  setTimeout(()=>{
+    const el=document.getElementById('pcard-'+id);
+    if(el) el.classList.add('dragging');
+  }, 0);
+};
+
+window.pedDragOver = function(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const card = e.currentTarget;
+  card.classList.add('drag-over');
+};
+
+window.pedDragLeave = function(e) {
+  e.currentTarget.classList.remove('drag-over');
+};
+
+window.pedDrop = async function(e, toId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const fromId = pedDraggingId;
+  // Remove dragging class from source
+  const fromEl = document.getElementById('pcard-'+fromId);
+  if(fromEl) fromEl.classList.remove('dragging');
+  pedDraggingId = null;
+  if(fromId !== toId) {
+    await ped_moverOrden(fromId, toId);
+  }
+};
+
 
 
 // ══════════════════════════════════════════════════════════
@@ -5042,6 +5147,10 @@ window.pedSetFiltro = pedSetFiltro;
 window.batSetFiltro = batSetFiltro;
 window.renderPedidos = renderPedidos;
 window.ped_render = ped_render;
+window.pedDragStart = pedDragStart;
+window.pedDragOver = pedDragOver;
+window.pedDragLeave = pedDragLeave;
+window.pedDrop = pedDrop;
 window.ped_renderHist = ped_renderHist;
 window.ped_renderCards = ped_renderCards;
 window.fmt = fmt;
