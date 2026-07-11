@@ -1491,26 +1491,46 @@ window.i_tipo=function(t,btn){
 window.i_guardar=async function(){
   const origen=document.getElementById('i-origen').value.trim(),monto=parseFloat(document.getElementById('i-monto').value),fr=document.getElementById('i-frec').value;
   if(!origen||isNaN(monto)||!fr){alert('Completá origen, monto y fecha');return;}
-  S.ingresos.items.push({id:Date.now(),tipo:iTipoAct,origen,monto,fechaRec:fr,fechaCobro:document.getElementById('i-fcobro').value,numero:document.getElementById('i-num').value.trim(),banco:document.getElementById('i-banco').value.trim(),concepto:document.getElementById('i-conc').value.trim(),estado:document.getElementById('i-estado').value});
+  const nuevoItem={id:Date.now(),tipo:iTipoAct,origen,monto,fechaRec:fr,fechaCobro:document.getElementById('i-fcobro').value,numero:document.getElementById('i-num').value.trim(),banco:document.getElementById('i-banco').value.trim(),concepto:document.getElementById('i-conc').value.trim(),estado:document.getElementById('i-estado').value};
+  // Recargar desde Firestore antes de agregar para no pisar cambios de otra sesión
+  try {
+    const snap = await getDoc(doc(db,'gestion','ingresos'));
+    if(snap.exists()) S.ingresos = snap.data().value;
+  } catch(e) {}
+  S.ingresos.items.push(nuevoItem);
   await save('ingresos'); i_dlUpdate();
   ['i-origen','i-monto','i-fcobro','i-num','i-banco','i-conc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   i_renderCards(); i_renderPend(); i_renderHist();
 };
 window.i_toggle=async function(id){
-  const i=S.ingresos.items.find(x=>x.id===id);if(!i)return;
-  const nuevoEstado=i.estado==='acreditado'?'pendiente':'acreditado';
-  i.estado=nuevoEstado;
+  try {
+    // Recargar estado fresco desde Firestore
+    const snap = await getDoc(doc(db,'gestion','ingresos'));
+    if(snap.exists()) S.ingresos = snap.data().value;
+  } catch(e) {}
+  const i=S.ingresos.items.find(x=>x.id===id);
+  if(!i){ alert('No se encontró el ingreso. Recargá la página.'); return; }
+  const estadoAnterior = i.estado;
+  i.estado = i.estado==='acreditado'?'pendiente':'acreditado';
   try {
     await save('ingresos');
-    showToast('✓ Guardado correctamente');
+    showToast(i.estado==='acreditado'?'✓ Acreditado':'↩ Reactivado');
     i_renderCards();i_renderPend();i_renderHist();
   } catch(e) {
-    // Revert on failure
-    i.estado=i.estado==='acreditado'?'pendiente':'acreditado';
+    i.estado = estadoAnterior; // revert
     i_renderCards();i_renderPend();i_renderHist();
   }
 };
-window.i_del=async function(id){if(!isAdmin()){alert('Solo el admin puede eliminar.');return;}if(!confirm('¿Eliminás?'))return;S.ingresos.items=S.ingresos.items.filter(i=>i.id!==id);await save('ingresos');i_dlUpdate();i_renderCards();i_renderPend();i_renderHist();};
+window.i_del=async function(id){
+  if(!isAdmin()){alert('Solo el admin puede eliminar.');return;}
+  if(!confirm('¿Eliminás?'))return;
+  try {
+    const snap = await getDoc(doc(db,'gestion','ingresos'));
+    if(snap.exists()) S.ingresos = snap.data().value;
+  } catch(e) {}
+  S.ingresos.items=S.ingresos.items.filter(i=>i.id!==id);
+  await save('ingresos');i_dlUpdate();i_renderCards();i_renderPend();i_renderHist();
+};
 function i_renderCards(){
   const h=hoy(),m=manana(),mes=mesPref();
   const pend=S.ingresos.items.filter(i=>i.estado!=='acreditado');
