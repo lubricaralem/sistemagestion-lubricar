@@ -538,19 +538,17 @@ async function save(mod, retries=3) {
 // Guarda un módulo recargando primero desde Firestore para evitar
 // que dos sesiones paralelas se pisen los datos
 async function safeSaveArray(mod, arrayKey, newItems) {
+  // Siempre recargar desde Firestore antes de escribir
+  // para no pisar cambios hechos en otra sesión
+  let serverData = S[mod];
   try {
-    // 1. Leer estado actual desde Firestore
     const snap = await getDoc(doc(db, 'gestion', mod));
-    const serverData = snap.exists() ? snap.data().value : S[mod];
-    // 2. Reemplazar solo el array que cambiamos
-    serverData[arrayKey] = newItems;
-    S[mod] = serverData;
-    // 3. Guardar
-    await save(mod);
-  } catch(e) {
-    // Fallback: guardar lo que tenemos en memoria
-    await save(mod);
-  }
+    if(snap.exists()) serverData = snap.data().value;
+  } catch(e) { /* usar estado local como fallback */ }
+  serverData[arrayKey] = newItems;
+  S[mod] = serverData;
+  await save(mod);
+  showToast('✓ Guardado');
 }
 async function loadAll() {
   const mods = ['echeqs','caja','proveedores','ingresos','iva','sueldos','impuestos','usuarios','contactos','pedidos','baterias','mercaderia','services'];
@@ -1701,7 +1699,7 @@ function iva_renderC(){
   const bd=document.getElementById('iva-c-badge');if(bd)bd.textContent=compras.length;
   const el=document.getElementById('iva-c-list');if(!el)return;
   if(!compras.length){el.innerHTML='<div class="empty">Sin compras.</div>';return;}
-  el.innerHTML=`<table class="iva-tabla"><thead><tr><th>Fecha</th><th>Proveedor</th><th>N° Factura</th><th style="text-align:right">Monto</th><th style="text-align:right">IVA</th><th></th></tr></thead><tbody>${compras.map(c=>`<tr><td>${fmtF(c.fecha)}</td><td style="font-weight:700">${c.proveedor}</td><td style="font-size:11px;color:#aaa">${c.numero||''}</td><td style="text-align:right">${fmt(c.monto)}</td><td style="text-align:right;color:#d93025">${fmt(c.iva)}</td><td>${isAdmin()?`<button class="btn-s btn-del" onclick="iva_delC(${c.id})">✕</button>`:''}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Total</td><td style="text-align:right">${fmt(compras.reduce((s,c)=>s+c.monto,0))}</td><td style="text-align:right;color:#d93025">${fmt(compras.reduce((s,c)=>s+c.iva,0))}</td><td></td></tr></tfoot></table>`;
+  el.innerHTML=`<table class="iva-tabla"><thead><tr><th>Fecha</th><th>Proveedor</th><th>N° Factura</th><th style="text-align:right">Monto</th><th style="text-align:right">IVA</th><th></th></tr></thead><tbody>${compras.map(c=>`<tr><td>${fmtF(c.fecha)}</td><td style="font-weight:700">${c.proveedor}</td><td style="font-size:11px;color:#aaa">${c.numero||''}</td><td style="text-align:right">${fmt(c.monto)}</td><td style="text-align:right;color:#d93025">${fmt(c.iva)}</td><td style="display:flex;gap:4px"><button class="btn-s" onclick="iva_editarC(${c.id})" style="font-size:11px">✏</button>${isAdmin()?`<button class="btn-s btn-del" onclick="iva_delC(${c.id})" style="font-size:11px">✕</button>`:''}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Total</td><td style="text-align:right">${fmt(compras.reduce((s,c)=>s+c.monto,0))}</td><td style="text-align:right;color:#d93025">${fmt(compras.reduce((s,c)=>s+c.iva,0))}</td><td></td></tr></tfoot></table>`;
 }
 window.iva_renderRes=function(){
   const mes=document.getElementById('iva-mes-res')?.value||mesPref();
@@ -5091,6 +5089,46 @@ window.iva_guardarEdit = async function() {
   iva_renderV(); iva_renderRes();
 };
 
+
+// ── EDITAR COMPRA IVA ──
+window.iva_editarC = function(id) {
+  const comp = S.iva.compras.find(x=>x.id===id); if(!comp) return;
+  document.getElementById('iva-c-edit-id').value   = id;
+  document.getElementById('iva-c-edit-fecha').value = comp.fecha||'';
+  document.getElementById('iva-c-edit-prov').value  = comp.proveedor||'';
+  document.getElementById('iva-c-edit-num').value   = comp.numero||'';
+  document.getElementById('iva-c-edit-monto').value = comp.monto||'';
+  document.getElementById('iva-c-edit-iva').value   = comp.iva||'';
+  document.getElementById('iva-c-edit-alic').value  = '0';
+  document.getElementById('iva-c-modal').classList.add('open');
+};
+window.ivaCEditCalc = function() {
+  const m = parseFloat(document.getElementById('iva-c-edit-monto')?.value)||0;
+  const a = parseFloat(document.getElementById('iva-c-edit-alic')?.value)||0;
+  const el = document.getElementById('iva-c-edit-iva');
+  if(el && a > 0) el.value = Math.round((m/(1+a))*a*100)/100 || '';
+};
+window.iva_guardarEditC = async function() {
+  const id    = parseInt(document.getElementById('iva-c-edit-id').value);
+  const comp  = S.iva.compras.find(x=>x.id===id); if(!comp){alert('Error');return;}
+  const fecha = document.getElementById('iva-c-edit-fecha').value;
+  const prov  = document.getElementById('iva-c-edit-prov').value.trim();
+  const monto = parseFloat(document.getElementById('iva-c-edit-monto').value)||0;
+  const iva   = parseFloat(document.getElementById('iva-c-edit-iva').value)||0;
+  if(!fecha||!prov||!monto){alert('Completá fecha, proveedor y monto');return;}
+  comp.fecha     = fecha;
+  comp.proveedor = prov;
+  comp.numero    = document.getElementById('iva-c-edit-num').value.trim();
+  comp.monto     = monto;
+  comp.iva       = iva;
+  S.iva.compras.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  await safeSaveArray('iva','compras',S.iva.compras);
+  iva_dlUpdate();
+  cerrarModal('iva-c-modal');
+  iva_renderC(); iva_renderRes();
+  showToast('✓ Factura de compra actualizada');
+};
+
 // ══════════════════════════════════════════════════════════
 // EXPOSE ALL TO WINDOW (needed for dynamic onclick handlers)
 // ══════════════════════════════════════════════════════════
@@ -5184,6 +5222,30 @@ document.head.appendChild(tableStyle);
 
 </script>
 
+
+<!-- MODAL EDITAR COMPRA IVA -->
+<div class="modal-overlay" id="iva-c-modal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-title">Editar factura de compra <button class="modal-close" onclick="cerrarModal('iva-c-modal')">✕</button></div>
+    <input type="hidden" id="iva-c-edit-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Fecha</label><input type="date" id="iva-c-edit-fecha"/></div>
+      <div class="fg"><label>Proveedor</label><input type="text" id="iva-c-edit-prov" list="iva-prov-dl"/></div>
+      <div class="fg"><label>N° factura</label><input type="text" id="iva-c-edit-num"/></div>
+      <div class="fg"><label>Monto total ($)</label><input type="number" id="iva-c-edit-monto" step="0.01" oninput="ivaCEditCalc()"/></div>
+      <div class="fg"><label>IVA ($)</label><input type="number" id="iva-c-edit-iva" step="0.01"/></div>
+      <div class="fg"><label>Alícuota</label><select id="iva-c-edit-alic" onchange="ivaCEditCalc()">
+        <option value="0.21">21%</option>
+        <option value="0.105">10.5%</option>
+        <option value="0">Manual</option>
+      </select></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn-p" style="flex:1" onclick="iva_guardarEditC()">Guardar cambios</button>
+      <button class="btn-s" onclick="cerrarModal('iva-c-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL EDITAR VENTA IVA -->
 <div class="modal-overlay" id="iva-v-modal">
   <div class="modal-box">
