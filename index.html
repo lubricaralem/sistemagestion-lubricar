@@ -1211,7 +1211,7 @@ function c_renderHist(){
     if(c.efectivo)p.push('Ef: '+fmt(c.efectivo));if(tj)p.push('Tarj: '+fmt(tj));
     if(c.uala)p.push('Uala: '+fmt(c.uala));if(c.openpay)p.push('OP: '+fmt(c.openpay));
     if(c.provincia)p.push('Prov: '+fmt(c.provincia));if(c.otro)p.push((c.otroDesc||'Otro')+': '+fmt(c.otro));
-    html+=`<div class="item"><div class="item-h"><span class="item-name">${fmtF(c.fecha)}${c.fecha===h?' <span class="badge b-blue">Hoy</span>':''}</span>${isAdmin()?`<button class="btn-s btn-del" onclick="c_del(${c.id})">Eliminar</button>`:''}</div><div class="item-meta">${p.join(' · ')}</div>${c.obs?`<div style="font-size:12px;color:#888">${c.obs}</div>`:''}<div style="display:flex;justify-content:space-between;border-top:1px solid #f0f0f0;padding-top:8px;margin-top:4px"><span style="font-size:12px;color:#888">Total</span><span style="font-weight:700;color:#1e8e3e">${fmt(c.total)}</span></div></div>`;
+    html+=`<div class="item"><div class="item-h"><span class="item-name">${fmtF(c.fecha)}${c.fecha===h?' <span class="badge b-blue">Hoy</span>':''}</span><div style="display:flex;gap:5px"><button class="btn-s" onclick="cajae_abrir(${c.id})" style="font-size:11px">✏ Editar</button>${isAdmin()?`<button class="btn-s btn-del" onclick="c_del(${c.id})">Eliminar</button>`:''}</div></div><div class="item-meta">${p.join(' · ')}</div>${c.obs?`<div style="font-size:12px;color:#888">${c.obs}</div>`:''}<div style="display:flex;justify-content:space-between;border-top:1px solid #f0f0f0;padding-top:8px;margin-top:4px"><span style="font-size:12px;color:#888">Total</span><span style="font-weight:700;color:#1e8e3e">${fmt(c.total)}</span></div></div>`;
   });
   cl.innerHTML=html;
 }
@@ -1368,6 +1368,7 @@ function p_itemHtml(p){
     ${p.obs?`<div style="font-size:12px;color:#888">${p.obs}</div>`:''}
     <div class="item-foot">${bdg}${p.forma==='echeq'?'<span class="badge b-teal">Echeq</span>':''}
       <div style="display:flex;gap:6px">
+        <button class="btn-s" onclick="ppe_abrir(${p.id})" style="font-size:11px">✏ Editar</button>
         <button class="btn-s" onclick="p_toggle(${p.id})">${p.estado==='pagado'?'↩ Reactivar':'✓ Pagado'}</button>
         ${isAdmin()?`<button class="btn-s btn-del" onclick="p_del(${p.id})">Eliminar</button>`:''}
       </div>
@@ -1552,6 +1553,7 @@ function i_itemHtml(i){
     <div class="item-meta"><span>${fmtF(i.fechaRec)}</span>${i.fechaCobro?`<span>Cobro: ${fmtF(i.fechaCobro)}</span>`:''}${i.numero?`<span>N°${i.numero}</span>`:''}${i.banco?`<span>${i.banco}</span>`:''}</div>
     <div class="item-foot"><div style="display:flex;gap:4px">${tBdg} ${sBdg}</div>
       <div style="display:flex;gap:6px">
+        <button class="btn-s" onclick="inge_abrir(${i.id})" style="font-size:11px">✏ Editar</button>
         <button class="btn-s" onclick="i_toggle(${i.id})">${i.estado==='acreditado'?'↩ Reactivar':'✓ Acreditado'}</button>
         ${isAdmin()?`<button class="btn-s btn-del" onclick="i_del(${i.id})">Eliminar</button>`:''}
       </div>
@@ -5130,6 +5132,116 @@ window.iva_guardarEditC = async function() {
   showToast('✓ Factura de compra actualizada');
 };
 
+
+// ── EDITAR PAGO PROVEEDOR ──
+window.ppe_abrir = function(id) {
+  const p = S.proveedores.pagos.find(x=>x.id===id); if(!p) return;
+  document.getElementById('ppe-id').value     = id;
+  document.getElementById('ppe-prov').value   = p.proveedor||'';
+  document.getElementById('ppe-monto').value  = p.monto||'';
+  document.getElementById('ppe-fpago').value  = p.fechaPago||'';
+  document.getElementById('ppe-fvenc').value  = p.fechaVenc||'';
+  document.getElementById('ppe-forma').value  = p.forma||'transferencia';
+  document.getElementById('ppe-fact').value   = p.factura||'';
+  document.getElementById('ppe-cat').value    = p.categoria||'mercaderia';
+  document.getElementById('ppe-est').value    = p.estado||'pendiente';
+  document.getElementById('ppe-obs').value    = p.obs||'';
+  cont_dlUpdate();
+  document.getElementById('prov-pago-modal').classList.add('open');
+};
+window.ppe_guardar = async function() {
+  const id = parseInt(document.getElementById('ppe-id').value);
+  const p  = S.proveedores.pagos.find(x=>x.id===id); if(!p){alert('Error');return;}
+  const prov  = document.getElementById('ppe-prov').value.trim();
+  const monto = parseFloat(document.getElementById('ppe-monto').value);
+  const fp    = document.getElementById('ppe-fpago').value;
+  if(!prov||isNaN(monto)||!fp){alert('Completá proveedor, monto y fecha');return;}
+  p.proveedor = prov; p.monto = monto; p.fechaPago = fp;
+  p.fechaVenc  = document.getElementById('ppe-fvenc').value;
+  p.forma      = document.getElementById('ppe-forma').value;
+  p.factura    = document.getElementById('ppe-fact').value.trim();
+  p.categoria  = document.getElementById('ppe-cat').value;
+  p.estado     = document.getElementById('ppe-est').value;
+  p.obs        = document.getElementById('ppe-obs').value.trim();
+  await save('proveedores');
+  cerrarModal('prov-pago-modal');
+  p_renderCards(); p_renderPend(); p_renderHist();
+  showToast('✓ Pago actualizado');
+};
+
+// ── EDITAR INGRESO ──
+window.inge_abrir = function(id) {
+  const i = S.ingresos.items.find(x=>x.id===id); if(!i) return;
+  document.getElementById('inge-id').value     = id;
+  document.getElementById('inge-tipo').value   = i.tipo||'transferencia';
+  document.getElementById('inge-origen').value = i.origen||'';
+  document.getElementById('inge-monto').value  = i.monto||'';
+  document.getElementById('inge-frec').value   = i.fechaRec||'';
+  document.getElementById('inge-fcobro').value = i.fechaCobro||'';
+  document.getElementById('inge-num').value    = i.numero||'';
+  document.getElementById('inge-banco').value  = i.banco||'';
+  document.getElementById('inge-conc').value   = i.concepto||'';
+  document.getElementById('inge-estado').value = i.estado||'pendiente';
+  cont_dlUpdate();
+  document.getElementById('ing-edit-modal').classList.add('open');
+};
+window.inge_guardar = async function() {
+  const id = parseInt(document.getElementById('inge-id').value);
+  try {
+    const snap = await getDoc(doc(db,'gestion','ingresos'));
+    if(snap.exists()) S.ingresos = snap.data().value;
+  } catch(e) {}
+  const i = S.ingresos.items.find(x=>x.id===id); if(!i){alert('Error');return;}
+  const monto = parseFloat(document.getElementById('inge-monto').value);
+  const fr    = document.getElementById('inge-frec').value;
+  if(!fr||isNaN(monto)){alert('Completá monto y fecha');return;}
+  i.tipo      = document.getElementById('inge-tipo').value;
+  i.origen    = document.getElementById('inge-origen').value.trim();
+  i.monto     = monto;
+  i.fechaRec  = fr;
+  i.fechaCobro= document.getElementById('inge-fcobro').value;
+  i.numero    = document.getElementById('inge-num').value.trim();
+  i.banco     = document.getElementById('inge-banco').value.trim();
+  i.concepto  = document.getElementById('inge-conc').value.trim();
+  i.estado    = document.getElementById('inge-estado').value;
+  await save('ingresos');
+  cerrarModal('ing-edit-modal');
+  i_renderCards(); i_renderPend(); i_renderHist();
+  showToast('✓ Ingreso actualizado');
+};
+
+// ── EDITAR CIERRE CAJA ──
+window.cajae_abrir = function(id) {
+  const d = S.caja.dias.find(x=>x.id===id); if(!d) return;
+  document.getElementById('cajae-id').value       = id;
+  document.getElementById('cajae-fecha').value    = d.fecha||'';
+  document.getElementById('cajae-efectivo').value = d.efectivo||'';
+  document.getElementById('cajae-tarjetas').value = d.tarjetas||'';
+  document.getElementById('cajae-uala').value     = d.uala||'';
+  document.getElementById('cajae-openpay').value  = d.openpay||'';
+  document.getElementById('cajae-provincia').value= d.provincia||'';
+  document.getElementById('cajae-obs').value      = d.obs||'';
+  document.getElementById('caja-edit-modal').classList.add('open');
+};
+window.cajae_guardar = async function() {
+  const id = parseInt(document.getElementById('cajae-id').value);
+  const d  = S.caja.dias.find(x=>x.id===id); if(!d){alert('Error');return;}
+  const fecha = document.getElementById('cajae-fecha').value;
+  if(!fecha){alert('Ingresá la fecha');return;}
+  d.fecha     = fecha;
+  d.efectivo  = parseFloat(document.getElementById('cajae-efectivo').value)||0;
+  d.tarjetas  = parseFloat(document.getElementById('cajae-tarjetas').value)||0;
+  d.uala      = parseFloat(document.getElementById('cajae-uala').value)||0;
+  d.openpay   = parseFloat(document.getElementById('cajae-openpay').value)||0;
+  d.provincia = parseFloat(document.getElementById('cajae-provincia').value)||0;
+  d.obs       = document.getElementById('cajae-obs').value.trim();
+  d.total     = d.efectivo + d.tarjetas + d.uala + d.openpay + d.provincia;
+  await save('caja');
+  cerrarModal('caja-edit-modal');
+  caja_renderHist();
+  showToast('✓ Caja actualizada');
+};
+
 // ══════════════════════════════════════════════════════════
 // EXPOSE ALL TO WINDOW (needed for dynamic onclick handlers)
 // ══════════════════════════════════════════════════════════
@@ -5334,6 +5446,84 @@ document.head.appendChild(tableStyle);
     <div style="display:flex;gap:10px">
       <button class="btn-p" style="flex:1" onclick="prov_guardarModal()">Guardar proveedor</button>
       <button class="btn-s" onclick="cerrarModal('prov-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PAGO PROVEEDOR -->
+<div class="modal-overlay" id="prov-pago-modal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">Editar pago <button class="modal-close" onclick="cerrarModal('prov-pago-modal')">✕</button></div>
+    <input type="hidden" id="ppe-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Proveedor</label><input type="text" id="ppe-prov" list="ppe-dl"/><datalist id="ppe-dl" class="dl-proveedores"></datalist></div>
+      <div class="fg"><label>Monto ($)</label><input type="number" id="ppe-monto" step="0.01"/></div>
+      <div class="fg"><label>Fecha pago</label><input type="date" id="ppe-fpago"/></div>
+      <div class="fg"><label>Fecha vencimiento</label><input type="date" id="ppe-fvenc"/></div>
+      <div class="fg"><label>Forma de pago</label><select id="ppe-forma">
+        <option value="transferencia">Transferencia</option><option value="efectivo">Efectivo</option>
+        <option value="cheque">Cheque</option><option value="echeq">Echeq</option>
+        <option value="tarjeta">Tarjeta</option><option value="otro">Otro</option>
+      </select></div>
+      <div class="fg"><label>N° factura</label><input type="text" id="ppe-fact"/></div>
+      <div class="fg"><label>Categoría</label><select id="ppe-cat">
+        <option value="mercaderia">Mercadería</option><option value="servicios">Servicios</option>
+        <option value="impuestos">Impuestos</option><option value="alquiler">Alquiler</option>
+        <option value="sueldos">Sueldos</option><option value="mantenimiento">Mantenimiento</option><option value="otro">Otro</option>
+      </select></div>
+      <div class="fg"><label>Estado</label><select id="ppe-est"><option value="pendiente">Pendiente</option><option value="pagado">Pagado</option></select></div>
+      <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><input type="text" id="ppe-obs"/></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn-p" style="flex:1" onclick="ppe_guardar()">Guardar cambios</button>
+      <button class="btn-s" onclick="cerrarModal('prov-pago-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR INGRESO -->
+<div class="modal-overlay" id="ing-edit-modal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">Editar ingreso <button class="modal-close" onclick="cerrarModal('ing-edit-modal')">✕</button></div>
+    <input type="hidden" id="inge-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Tipo</label><select id="inge-tipo">
+        <option value="transferencia">Transferencia</option><option value="cheque">Cheque</option>
+        <option value="echeq">Echeq</option><option value="efectivo">Efectivo</option>
+      </select></div>
+      <div class="fg"><label>Origen / Cliente</label><input type="text" id="inge-origen" list="inge-cl-dl"/><datalist id="inge-cl-dl" class="dl-clientes"></datalist></div>
+      <div class="fg"><label>Monto ($)</label><input type="number" id="inge-monto" step="0.01"/></div>
+      <div class="fg"><label>Fecha recibido</label><input type="date" id="inge-frec"/></div>
+      <div class="fg"><label>Fecha cobro</label><input type="date" id="inge-fcobro"/></div>
+      <div class="fg"><label>N° / Referencia</label><input type="text" id="inge-num"/></div>
+      <div class="fg"><label>Banco</label><input type="text" id="inge-banco"/></div>
+      <div class="fg"><label>Concepto</label><input type="text" id="inge-conc"/></div>
+      <div class="fg"><label>Estado</label><select id="inge-estado"><option value="pendiente">Pendiente</option><option value="acreditado">Acreditado</option></select></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn-p" style="flex:1" onclick="inge_guardar()">Guardar cambios</button>
+      <button class="btn-s" onclick="cerrarModal('ing-edit-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR CAJA -->
+<div class="modal-overlay" id="caja-edit-modal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">Editar cierre de caja <button class="modal-close" onclick="cerrarModal('caja-edit-modal')">✕</button></div>
+    <input type="hidden" id="cajae-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Fecha</label><input type="date" id="cajae-fecha"/></div>
+      <div class="fg"><label>Efectivo ($)</label><input type="number" id="cajae-efectivo" step="0.01"/></div>
+      <div class="fg"><label>Tarjetas ($)</label><input type="number" id="cajae-tarjetas" step="0.01"/></div>
+      <div class="fg"><label>Uala ($)</label><input type="number" id="cajae-uala" step="0.01"/></div>
+      <div class="fg"><label>Openpay ($)</label><input type="number" id="cajae-openpay" step="0.01"/></div>
+      <div class="fg"><label>Prov. Neta ($)</label><input type="number" id="cajae-provincia" step="0.01"/></div>
+      <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><input type="text" id="cajae-obs"/></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn-p" style="flex:1" onclick="cajae_guardar()">Guardar cambios</button>
+      <button class="btn-s" onclick="cerrarModal('caja-edit-modal')">Cancelar</button>
     </div>
   </div>
 </div>
