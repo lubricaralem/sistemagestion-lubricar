@@ -867,6 +867,16 @@ window.dash_renderAnual = function() {
     });
 
   const balanceMes = ingresosMes.map((ing,i) => ing - egresosMes[i]);
+  // DEBUG — aparece en consola del navegador (F12)
+  const MESES_DBG = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  console.table(MESES_DBG.map((mes,i)=>({
+    mes,
+    caja:     Math.round((S.caja?.cierres||[]).filter(d=>(d.fecha||'').startsWith(String(anio)+'-'+(String(i+1).padStart(2,'0')))).reduce((s,d)=>s+(d.total||0),0)),
+    ingresos_transf: Math.round((S.ingresos?.items||[]).filter(x=>x.estado==='acreditado'&&(x.fechaRec||'').startsWith(String(anio)+'-'+(String(i+1).padStart(2,'0')))&&x.tipo!=='efectivo').reduce((s,x)=>s+(x.monto||0),0)),
+    total_ingresos: Math.round(ingresosMes[i]),
+    total_egresos:  Math.round(egresosMes[i]),
+    balance:        Math.round(balanceMes[i])
+  })));
   const totalIng = ingresosMes.reduce((s,v)=>s+v,0);
   const totalEgr = egresosMes.reduce((s,v)=>s+v,0);
   const totalBal = totalIng - totalEgr;
