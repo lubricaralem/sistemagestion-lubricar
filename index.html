@@ -805,10 +805,150 @@ function renderDash() {
     </div>
     <div id="dash-alertas"></div>
     <div class="dash-bloque" id="dash-bloque"></div>
-    <div class="dash-grid" id="dash-grid"></div>`;
+    <div class="dash-grid" id="dash-grid"></div>
+    <div class="section" style="margin-top:1.5rem" id="dash-anual-wrap">
+      <div class="sec-title" id="dash-anual-title">Resumen anual</div>
+      <div id="dash-anual-chart"></div>
+    </div>`;
   document.getElementById('dash-mes').value = mesPref();
   dashRefresh();
 }
+
+window.dash_renderAnual = function() {
+  const wrap = document.getElementById('dash-anual-wrap');
+  const el   = document.getElementById('dash-anual-chart');
+  const title= document.getElementById('dash-anual-title');
+  if(!el) return;
+
+  const anio = new Date().getFullYear();
+  if(title) title.textContent = 'Resumen anual ' + anio;
+
+  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Calcular ingresos y egresos por mes
+  const ingresosMes = Array(12).fill(0);
+  const egresosMes  = Array(12).fill(0);
+
+  // Ingresos acreditados por fechaRec
+  (S.ingresos?.items||[]).filter(i=>i.estado==='acreditado'&&(i.fechaRec||'').startsWith(anio+'')).forEach(i=>{
+    const m = parseInt((i.fechaRec||'').slice(5,7)) - 1;
+    if(m>=0&&m<12) ingresosMes[m] += i.monto||0;
+  });
+
+  // Egresos: proveedores pagados + sueldos + impuestos + insumos
+  (S.proveedores?.pagos||[]).filter(p=>p.estado==='pagado'&&(p.fechaPago||'').startsWith(anio+'')).forEach(p=>{
+    const m = parseInt((p.fechaPago||'').slice(5,7)) - 1;
+    if(m>=0&&m<12) egresosMes[m] += p.monto||0;
+  });
+  (S.sueldos?.liquidaciones||[]).filter(l=>(l.mes||'').startsWith(anio+'')).forEach(l=>{
+    const m = parseInt((l.mes||'').slice(5,7)) - 1;
+    if(m>=0&&m<12) egresosMes[m] += (l.total||0) + (l.insumos||0);
+  });
+  (S.impuestos?.items||[]).filter(t=>(t.fecha||'').startsWith(anio+'')).forEach(t=>{
+    const m = parseInt((t.fecha||'').slice(5,7)) - 1;
+    if(m>=0&&m<12) egresosMes[m] += t.monto||0;
+  });
+
+  const balanceMes = ingresosMes.map((ing,i) => ing - egresosMes[i]);
+
+  const totalIng = ingresosMes.reduce((s,v)=>s+v,0);
+  const totalEgr = egresosMes.reduce((s,v)=>s+v,0);
+  const totalBal = totalIng - totalEgr;
+
+  // SVG dimensions
+  const W = 760, H = 280, PAD_L = 80, PAD_R = 20, PAD_T = 20, PAD_B = 60;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+  const colW = chartW / 12;
+  const barW = colW * 0.28;
+
+  const allVals = [...ingresosMes, ...egresosMes, 0];
+  const maxVal  = Math.max(...allVals, 1);
+
+  // Y scale
+  const yScale = v => chartH - (v / maxVal) * chartH;
+  // Y axis labels
+  const yTicks = 5;
+  const yStep  = maxVal / yTicks;
+
+  function fmtM(v) {
+    if(v >= 1e6) return '$' + (v/1e6).toFixed(1) + 'M';
+    if(v >= 1e3) return '$' + (v/1e3).toFixed(0) + 'K';
+    return '$' + v.toFixed(0);
+  }
+
+  // Build SVG
+  let svg = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:'+W+'px;display:block;margin:0 auto;font-family:Montserrat,Arial,sans-serif">';
+
+  // Grid lines + Y labels
+  for(let t=0; t<=yTicks; t++) {
+    const val = yStep * t;
+    const y   = PAD_T + yScale(val);
+    svg += '<line x1="'+PAD_L+'" y1="'+y+'" x2="'+(W-PAD_R)+'" y2="'+y+'" stroke="#eee" stroke-width="1"/>';
+    svg += '<text x="'+(PAD_L-8)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#aaa">'+fmtM(val)+'</text>';
+  }
+
+  // Zero line
+  const zeroY = PAD_T + chartH;
+  svg += '<line x1="'+PAD_L+'" y1="'+zeroY+'" x2="'+(W-PAD_R)+'" y2="'+zeroY+'" stroke="#999" stroke-width="1.5"/>';
+
+  // Bars + balance line points
+  const linePoints = [];
+
+  for(let m=0; m<12; m++) {
+    const xCenter = PAD_L + m * colW + colW / 2;
+    const ingH = (ingresosMes[m] / maxVal) * chartH;
+    const egrH = (egresosMes[m]  / maxVal) * chartH;
+
+    // Ingreso bar (gold)
+    if(ingH > 0) {
+      svg += '<rect x="'+(xCenter - barW - 2)+'" y="'+(PAD_T + yScale(ingresosMes[m])).toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+ingH.toFixed(1)+'" fill="#C9A43D" rx="2" opacity="0.9"/>';
+    }
+    // Egreso bar (dark)
+    if(egrH > 0) {
+      svg += '<rect x="'+(xCenter + 2)+'" y="'+(PAD_T + yScale(egresosMes[m])).toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+egrH.toFixed(1)+'" fill="#2B2B2B" rx="2" opacity="0.85"/>';
+    }
+
+    // Balance line point
+    const balY = PAD_T + yScale(Math.max(balanceMes[m], 0));
+    linePoints.push({ x: xCenter, y: balY, val: balanceMes[m] });
+
+    // X label
+    svg += '<text x="'+xCenter+'" y="'+(H - PAD_B + 18)+'" text-anchor="middle" font-size="11" fill="#555">'+MESES[m]+'</text>';
+  }
+
+  // Balance line
+  if(linePoints.length > 1) {
+    const pts = linePoints.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+    svg += '<polyline points="'+pts+'" fill="none" stroke="#1e8e3e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>';
+    // Dots
+    linePoints.forEach(p => {
+      svg += '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+(p.val>=0?'#1e8e3e':'#d93025')+'" stroke="#fff" stroke-width="1.5"/>';
+    });
+  }
+
+  // Legend
+  const legY = H - PAD_B + 38;
+  svg += '<rect x="'+PAD_L+'" y="'+legY+'" width="12" height="12" fill="#C9A43D" rx="2"/>';
+  svg += '<text x="'+(PAD_L+16)+'" y="'+(legY+10)+'" font-size="11" fill="#555">Ingresos</text>';
+  svg += '<rect x="'+(PAD_L+90)+'" y="'+legY+'" width="12" height="12" fill="#2B2B2B" rx="2"/>';
+  svg += '<text x="'+(PAD_L+106)+'" y="'+(legY+10)+'" font-size="11" fill="#555">Egresos</text>';
+  svg += '<circle cx="'+(PAD_L+186)+'" cy="'+(legY+6)+'" r="5" fill="#1e8e3e"/>';
+  svg += '<text x="'+(PAD_L+196)+'" y="'+(legY+10)+'" font-size="11" fill="#555">Balance</text>';
+
+  svg += '</svg>';
+
+  // Totales debajo
+  const balColor = totalBal >= 0 ? '#1e8e3e' : '#d93025';
+  const totalsHtml = '<div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-top:14px;padding-top:12px;border-top:1px solid #eee">'
+    +'<div style="text-align:center"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Ingresos '+anio+'</div><div style="font-size:20px;font-weight:700;color:#C9A43D;margin-top:2px">'+fmt(totalIng)+'</div></div>'
+    +'<div style="text-align:center"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Egresos '+anio+'</div><div style="font-size:20px;font-weight:700;color:#2B2B2B;margin-top:2px">'+fmt(totalEgr)+'</div></div>'
+    +'<div style="text-align:center"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Balance '+anio+'</div><div style="font-size:20px;font-weight:700;margin-top:2px;color:'+balColor+'">'+fmt(totalBal)+'</div></div>'
+    +'</div>';
+
+  el.innerHTML = svg + totalsHtml;
+};
+
 window.dashRefresh = function() {
   const mes = document.getElementById('dash-mes')?.value || mesPref();
   const h = hoy();
@@ -886,6 +1026,8 @@ window.dashRefresh = function() {
       <div class="dash-row"><span>Impuestos pagados</span><span style="color:#d93025">${fmt(impMes)}</span></div>
       <div class="dash-row"><span>Saldo banco</span><span>${fmt(S.echeqs.saldo)}</span></div>
     </div>`;
+
+  dash_renderAnual();
 };
 
 // ══════════════════════════════════════════════════════════
