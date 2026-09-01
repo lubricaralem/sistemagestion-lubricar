@@ -821,6 +821,7 @@ window.dash_renderAnual = function() {
 
   const anio = new Date().getFullYear();
   const anioStr = String(anio);
+  const mesActual = new Date().getMonth(); // 0-based, mes actual inclusive
   if(title) title.textContent = 'Resumen anual ' + anio;
 
   const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -828,37 +829,31 @@ window.dash_renderAnual = function() {
   const egresosMes  = Array(12).fill(0);
 
   // ── INGRESOS ──
-  // 1) Caja: cierres diarios (S.caja.cierres)
   (S.caja?.cierres||[]).forEach(d => {
     if(!(d.fecha||'').startsWith(anioStr)) return;
     const m = parseInt((d.fecha).slice(5,7)) - 1;
     if(m>=0&&m<12) ingresosMes[m] += d.total||0;
   });
-  // 2) Ingresos acreditados (transf/cheques/echeqs) — NO sumar los de caja (son efectivo+tarjetas ya en caja)
-  //    Solo tipo transferencia, cheque, echeq — excluir efectivo que ya está en caja
   (S.ingresos?.items||[])
-    .filter(i=>i.estado==='acreditado' && (i.fechaRec||'').startsWith(anioStr) && i.tipo!=='efectivo')
+    .filter(i=>i.estado==='acreditado'&&(i.fechaRec||'').startsWith(anioStr)&&i.tipo!=='efectivo')
     .forEach(i=>{
       const m = parseInt((i.fechaRec).slice(5,7)) - 1;
       if(m>=0&&m<12) ingresosMes[m] += i.monto||0;
     });
 
   // ── EGRESOS ──
-  // 1) Proveedores pagados
   (S.proveedores?.pagos||[])
-    .filter(p=>p.estado==='pagado' && (p.fechaPago||'').startsWith(anioStr))
+    .filter(p=>p.estado==='pagado'&&(p.fechaPago||'').startsWith(anioStr))
     .forEach(p=>{
       const m = parseInt((p.fechaPago).slice(5,7)) - 1;
       if(m>=0&&m<12) egresosMes[m] += p.monto||0;
     });
-  // 2) Sueldos liquidados
   (S.sueldos?.liquidaciones||[])
     .filter(l=>(l.mes||'').startsWith(anioStr))
     .forEach(l=>{
       const m = parseInt((l.mes).slice(5,7)) - 1;
-      if(m>=0&&m<12) egresosMes[m] += (l.total||0) + (l.insumos||0);
+      if(m>=0&&m<12) egresosMes[m] += (l.total||0)+(l.insumos||0);
     });
-  // 3) Impuestos
   (S.impuestos?.items||[])
     .filter(t=>(t.fecha||'').startsWith(anioStr))
     .forEach(t=>{
@@ -867,35 +862,46 @@ window.dash_renderAnual = function() {
     });
 
   const balanceMes = ingresosMes.map((ing,i) => ing - egresosMes[i]);
-  // DEBUG — aparece en consola del navegador (F12)
-  const MESES_DBG = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  console.table(MESES_DBG.map((mes,i)=>({
-    mes,
-    caja:     Math.round((S.caja?.cierres||[]).filter(d=>(d.fecha||'').startsWith(String(anio)+'-'+(String(i+1).padStart(2,'0')))).reduce((s,d)=>s+(d.total||0),0)),
-    ingresos_transf: Math.round((S.ingresos?.items||[]).filter(x=>x.estado==='acreditado'&&(x.fechaRec||'').startsWith(String(anio)+'-'+(String(i+1).padStart(2,'0')))&&x.tipo!=='efectivo').reduce((s,x)=>s+(x.monto||0),0)),
-    total_ingresos: Math.round(ingresosMes[i]),
-    total_egresos:  Math.round(egresosMes[i]),
-    balance:        Math.round(balanceMes[i])
-  })));
+
+  // ── Solo graficar hasta el último mes con datos ──
+  let ultimoMes = 0;
+  for(let m=0; m<12; m++) {
+    if(ingresosMes[m]>0||egresosMes[m]>0) ultimoMes = m;
+  }
+  const nMeses = ultimoMes + 1; // cuántas columnas mostrar
+
+  const ingSlice = ingresosMes.slice(0, nMeses);
+  const egrSlice = egresosMes.slice(0, nMeses);
+  const balSlice = balanceMes.slice(0, nMeses);
+  const mesSlice = MESES.slice(0, nMeses);
+
   const totalIng = ingresosMes.reduce((s,v)=>s+v,0);
   const totalEgr = egresosMes.reduce((s,v)=>s+v,0);
   const totalBal = totalIng - totalEgr;
 
-  // ── SVG LINE CHART ──
+  // ── SVG ──
   const W=760, H=300, PL=90, PR=20, PT=24, PB=64;
   const cW=W-PL-PR, cH=H-PT-PB;
 
-  const allVals = [...ingresosMes, ...egresosMes, ...balanceMes];
+  // Escala usando solo los meses con datos
+  const allVals = [...ingSlice, ...egrSlice, ...balSlice];
   const maxVal  = Math.max(...allVals, 1);
   const minVal  = Math.min(...allVals, 0);
   const range   = maxVal - minVal || 1;
 
-  const xPos = m => PL + (m / 11) * cW;
-  const yPos = v => PT + cH - ((v - minVal) / range) * cH;
+  // Paso limpio para el eje Y
+  const rawStep = range / 5;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const niceStep = Math.ceil(rawStep / magnitude) * magnitude;
+  const niceMin = Math.floor(minVal / niceStep) * niceStep;
+  const niceMax = Math.ceil(maxVal / niceStep) * niceStep;
+  const niceRange = niceMax - niceMin || 1;
+
+  const xPos = m => nMeses===1 ? PL+cW/2 : PL + (m / (nMeses-1)) * cW;
+  const yPos = v => PT + cH - ((v - niceMin) / niceRange) * cH;
 
   function fmtM(v) {
-    const abs = Math.abs(v);
-    const sign = v < 0 ? '-' : '';
+    const abs=Math.abs(v), sign=v<0?'-':'';
     if(abs>=1e9) return sign+'$'+(abs/1e9).toFixed(1)+'B';
     if(abs>=1e6) return sign+'$'+(abs/1e6).toFixed(1)+'M';
     if(abs>=1e3) return sign+'$'+(abs/1e3).toFixed(0)+'K';
@@ -904,52 +910,52 @@ window.dash_renderAnual = function() {
 
   let svg = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;font-family:Montserrat,Arial,sans-serif">';
 
-  // Grid + Y labels
-  for(let t=0; t<=5; t++) {
-    const v = minVal + (range/5)*t;
+  // Grid + Y labels (pasos limpios)
+  const steps = Math.round((niceMax - niceMin) / niceStep);
+  for(let t=0; t<=steps; t++) {
+    const v = niceMin + niceStep * t;
     const y = yPos(v);
+    if(y < PT-2 || y > PT+cH+2) continue;
     svg += '<line x1="'+PL+'" y1="'+y.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+y.toFixed(1)+'" stroke="#eee" stroke-width="1"/>';
     svg += '<text x="'+(PL-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="9.5" fill="#aaa">'+fmtM(v)+'</text>';
   }
 
-  // Zero line
-  if(minVal < 0 && maxVal > 0) {
+  // Línea de cero
+  if(niceMin < 0 && niceMax > 0) {
     const zy = yPos(0);
     svg += '<line x1="'+PL+'" y1="'+zy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+zy.toFixed(1)+'" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>';
     svg += '<text x="'+(PL-8)+'" y="'+(zy+4).toFixed(1)+'" text-anchor="end" font-size="9" fill="#bbb">$0</text>';
   }
 
   function makeLine(data, color, dashed) {
-    const pts = data.map((v,m) => xPos(m).toFixed(1)+','+yPos(v).toFixed(1)).join(' ');
-    const dash = dashed ? ' stroke-dasharray="6,4"' : '';
-    let out = '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"'+dash+' opacity="0.95"/>';
+    if(data.length < 2) return '';
+    const pts = data.map((v,m)=>xPos(m).toFixed(1)+','+yPos(v).toFixed(1)).join(' ');
+    const dash = dashed?' stroke-dasharray="6,4"':'';
+    let out = '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"'+dash+'/>';
     if(!dashed && color==='#C9A43D') {
-      const zeroY = yPos(Math.max(minVal, 0));
-      const first = xPos(0).toFixed(1)+','+zeroY.toFixed(1);
-      const last  = xPos(11).toFixed(1)+','+zeroY.toFixed(1);
-      out += '<polygon points="'+first+' '+pts+' '+last+'" fill="#C9A43D" opacity="0.07"/>';
+      const zy = yPos(Math.max(niceMin,0));
+      out += '<polygon points="'+xPos(0).toFixed(1)+','+zy.toFixed(1)+' '+pts+' '+xPos(data.length-1).toFixed(1)+','+zy.toFixed(1)+'" fill="#C9A43D" opacity="0.07"/>';
     }
     return out;
   }
 
-  svg += makeLine(ingresosMes, '#C9A43D', false);
-  svg += makeLine(egresosMes,  '#2B2B2B', false);
-  svg += makeLine(balanceMes,  '#1a73e8', true);
-
   function makeDots(data, color) {
-    return data.map((v,m) =>
+    return data.map((v,m)=>
       '<circle cx="'+xPos(m).toFixed(1)+'" cy="'+yPos(v).toFixed(1)+'" r="4.5"'
       +' fill="'+color+'" stroke="#fff" stroke-width="1.5">'
-      +'<title>'+MESES[m]+': '+fmt(v)+'</title>'
-      +'</circle>'
+      +'<title>'+mesSlice[m]+': '+fmt(v)+'</title></circle>'
     ).join('');
   }
-  svg += makeDots(ingresosMes, '#C9A43D');
-  svg += makeDots(egresosMes,  '#2B2B2B');
-  svg += makeDots(balanceMes,  '#1a73e8');
+
+  svg += makeLine(ingSlice,'#C9A43D',false);
+  svg += makeLine(egrSlice,'#2B2B2B',false);
+  svg += makeLine(balSlice,'#1a73e8',true);
+  svg += makeDots(ingSlice,'#C9A43D');
+  svg += makeDots(egrSlice,'#2B2B2B');
+  svg += makeDots(balSlice,'#1a73e8');
 
   // X labels
-  MESES.forEach((mes,m) => {
+  mesSlice.forEach((mes,m)=>{
     svg += '<text x="'+xPos(m).toFixed(1)+'" y="'+(H-PB+18)+'" text-anchor="middle" font-size="11" fill="#555">'+mes+'</text>';
   });
 
@@ -958,23 +964,22 @@ window.dash_renderAnual = function() {
   let legX = PL;
   [{color:'#C9A43D',label:'Ingresos totales',dash:false},{color:'#2B2B2B',label:'Egresos totales',dash:false},{color:'#1a73e8',label:'Balance',dash:true}]
   .forEach(li=>{
-    if(li.dash){
-      svg+='<line x1="'+legX+'" y1="'+(legY+5)+'" x2="'+(legX+18)+'" y2="'+(legY+5)+'" stroke="'+li.color+'" stroke-width="2.5" stroke-dasharray="5,3"/>';
-    }else{
-      svg+='<rect x="'+legX+'" y="'+(legY-1)+'" width="18" height="4" rx="2" fill="'+li.color+'"/>';
-    }
+    if(li.dash){svg+='<line x1="'+legX+'" y1="'+(legY+5)+'" x2="'+(legX+18)+'" y2="'+(legY+5)+'" stroke="'+li.color+'" stroke-width="2.5" stroke-dasharray="5,3"/>';}
+    else{svg+='<rect x="'+legX+'" y="'+(legY-1)+'" width="18" height="4" rx="2" fill="'+li.color+'"/>';}
     svg+='<text x="'+(legX+22)+'" y="'+(legY+9)+'" font-size="11" fill="#555">'+li.label+'</text>';
     legX+=li.label.length*7+32;
   });
   svg+='</svg>';
 
   const balColor=totalBal>=0?'#1e8e3e':'#d93025';
-  el.innerHTML=svg+'<div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:16px;padding-top:14px;border-top:1px solid #eee">'
+  el.innerHTML=svg
+    +'<div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:16px;padding-top:14px;border-top:1px solid #eee">'
     +'<div style="text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Ingresos '+anio+'</div><div style="font-size:22px;font-weight:700;color:#C9A43D;margin-top:2px">'+fmt(totalIng)+'</div></div>'
     +'<div style="text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Egresos '+anio+'</div><div style="font-size:22px;font-weight:700;color:#2B2B2B;margin-top:2px">'+fmt(totalEgr)+'</div></div>'
     +'<div style="text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Balance '+anio+'</div><div style="font-size:22px;font-weight:700;margin-top:2px;color:'+balColor+'">'+fmt(totalBal)+'</div></div>'
     +'</div>';
 };
+;
 ;
 ;
 
